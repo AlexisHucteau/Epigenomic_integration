@@ -20,19 +20,34 @@ if (!exists("Methylation_data")){
   Methylation_data <- Methylation_data[,3:21]
 }
 if (!exists("Gene_expression_data")){
-  Gene_expression_data <- read.csv("../DATA_test/DATA_RNA_test.csv") %>% voom(., design, plot = FALSE)
+  Gene_expression_data <- read.csv("../DATA_test/DATA_RNA_test.csv")
+  rownames(Gene_expression_data) <- Gene_expression_data$X
+  Gene_expression_data <- Gene_expression_data[,3:21]
 }
 Phenotype <- read.csv("../DATA_test/Phenotype_met.csv")
 ```
 
 ```{r}
-Methylation_Comparison <- Differential_analysis(Phenotype$IDH, Methylation_data)
+Methylation_Comparison <- Differential_analysis(Phenotype$IDH, Methylation_data, type_of_data = "methylation")
+Gene_expression_comparison <- Differential_analysis(Phenotype$IDH, Gene_expression_data, type_of_data = "gene_expression")
+```
+```{r}
+if (!exists("ensembl")){
+  ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+}
 
+Genes_differentially_expressed <- add_genes_coordinates(Gene_expression_comparison[[1]]) %>% filter(., (logFC**2 > 2.25 & P.Value < 0.05 & hgnc_symbol != "")) %>% dplyr::select(., logFC, AveExpr, P.Value, hgnc_symbol)
 
+Genes_differentially_expressed$sens <- ifelse(Genes_differentially_expressed$logFC > 0, "up_regulated", "down_regulated")
+
+write.csv(Genes_differentially_expressed, "../Results/Genes_differentially_expressed.csv")
 ```
 
-
 ```{r}
+CpGs_differentially_methylated <- Methylation_Comparison[[1]] %>% filter(., (P.Value < 0.05 & logFC**2 > 0.3**2))
 
+CpGs_differentially_methylated$sens <- ifelse(CpGs_differentially_methylated$logFC > 0, "hypermethylated", "hypomethylated")
+
+write.csv(CpGs_differentially_methylated, "../Results/CpGs_differentially_methylated.csv")
 ```
 

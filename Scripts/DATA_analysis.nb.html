@@ -1767,11 +1767,23 @@ summary {
   # a &lt;- 0
 }</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5BdHRhY2hlbWVudCBkdSBwYWNrYWdlIDog4oCYZHBseXLigJlcblxuVGhlIGZvbGxvd2luZyBvYmplY3RzIGFyZSBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOnN0YXRz4oCZOlxuXG4gICAgZmlsdGVyLCBsYWdcblxuVGhlIGZvbGxvd2luZyBvYmplY3RzIGFyZSBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOmJhc2XigJk6XG5cbiAgICBpbnRlcnNlY3QsIHNldGRpZmYsIHNldGVxdWFsLCB1bmlvblxuIn0= -->
+<pre><code>
+Attachement du package : ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union</code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJNZXRoeWxhdGlvbl9kYXRhXCIpKXtcbiAgTWV0aHlsYXRpb25fZGF0YSA8LSByZWFkLmNzdihcIi4uL0RBVEFfdGVzdC9CTUlRX3Rlc3QuY3N2XCIpXG4gIHJvd25hbWVzKE1ldGh5bGF0aW9uX2RhdGEpIDwtIE1ldGh5bGF0aW9uX2RhdGEkWFxuICBNZXRoeWxhdGlvbl9kYXRhIDwtIE1ldGh5bGF0aW9uX2RhdGFbLDM6MjFdXG59XG5pZiAoIWV4aXN0cyhcIkdlbmVfZXhwcmVzc2lvbl9kYXRhXCIpKXtcbiAgR2VuZV9leHByZXNzaW9uX2RhdGEgPC0gcmVhZC5jc3YoXCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3ZcIilcbn1cblBoZW5vdHlwZSA8LSByZWFkLmNzdihcIi4uL0RBVEFfdGVzdC9QaGVub3R5cGVfbWV0LmNzdlwiKVxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJNZXRoeWxhdGlvbl9kYXRhXCIpKXtcbiAgTWV0aHlsYXRpb25fZGF0YSA8LSByZWFkLmNzdihcIi4uL0RBVEFfdGVzdC9CTUlRX3Rlc3QuY3N2XCIpXG4gIHJvd25hbWVzKE1ldGh5bGF0aW9uX2RhdGEpIDwtIE1ldGh5bGF0aW9uX2RhdGEkWFxuICBNZXRoeWxhdGlvbl9kYXRhIDwtIE1ldGh5bGF0aW9uX2RhdGFbLDM6MjFdXG59XG5pZiAoIWV4aXN0cyhcIkdlbmVfZXhwcmVzc2lvbl9kYXRhXCIpKXtcbiAgR2VuZV9leHByZXNzaW9uX2RhdGEgPC0gcmVhZC5jc3YoXCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3ZcIilcbiAgcm93bmFtZXMoR2VuZV9leHByZXNzaW9uX2RhdGEpIDwtIEdlbmVfZXhwcmVzc2lvbl9kYXRhJFhcbiAgR2VuZV9leHByZXNzaW9uX2RhdGEgPC0gR2VuZV9leHByZXNzaW9uX2RhdGFbLDM6MjFdXG59XG5QaGVub3R5cGUgPC0gcmVhZC5jc3YoXCIuLi9EQVRBX3Rlc3QvUGhlbm90eXBlX21ldC5jc3ZcIilcbmBgYCJ9 -->
 <pre class="r"><code>if (!exists(&quot;Methylation_data&quot;)){
   Methylation_data &lt;- read.csv(&quot;../DATA_test/BMIQ_test.csv&quot;)
   rownames(Methylation_data) &lt;- Methylation_data$X
@@ -1779,6 +1791,8 @@ summary {
 }
 if (!exists(&quot;Gene_expression_data&quot;)){
   Gene_expression_data &lt;- read.csv(&quot;../DATA_test/DATA_RNA_test.csv&quot;)
+  rownames(Gene_expression_data) &lt;- Gene_expression_data$X
+  Gene_expression_data &lt;- Gene_expression_data[,3:21]
 }
 Phenotype &lt;- read.csv(&quot;../DATA_test/Phenotype_met.csv&quot;)</code></pre>
 <!-- rnb-source-end -->
@@ -1786,21 +1800,48 @@ Phenotype &lt;- read.csv(&quot;../DATA_test/Phenotype_met.csv&quot;)</code></pre
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuQ29tcGFyaXNvbiA8LSBEaWZmZXJlbnRpYWxfYW5hbHlzaXMoUGhlbm90eXBlJElESCwgTWV0aHlsYXRpb25fZGF0YSlcbmBgYCJ9 -->
-<pre class="r"><code>Comparison &lt;- Differential_analysis(Phenotype$IDH, Methylation_data)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuTWV0aHlsYXRpb25fQ29tcGFyaXNvbiA8LSBEaWZmZXJlbnRpYWxfYW5hbHlzaXMoUGhlbm90eXBlJElESCwgTWV0aHlsYXRpb25fZGF0YSwgdHlwZV9vZl9kYXRhID0gXCJtZXRoeWxhdGlvblwiKVxuYGBgIn0= -->
+<pre class="r"><code>Methylation_Comparison &lt;- Differential_analysis(Phenotype$IDH, Methylation_data, type_of_data = &quot;methylation&quot;)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiMSBkb25lXG4ifQ== -->
+<pre><code>1 done</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuR2VuZV9leHByZXNzaW9uX2NvbXBhcmlzb24gPC0gRGlmZmVyZW50aWFsX2FuYWx5c2lzKFBoZW5vdHlwZSRJREgsIEdlbmVfZXhwcmVzc2lvbl9kYXRhLCB0eXBlX29mX2RhdGEgPSBcImdlbmVfZXhwcmVzc2lvblwiKVxuYGBgIn0= -->
+<pre class="r"><code>Gene_expression_comparison &lt;- Differential_analysis(Phenotype$IDH, Gene_expression_data, type_of_data = &quot;gene_expression&quot;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-output-begin eyJkYXRhIjoiMSBkb25lXG4ifQ== -->
 <pre><code>1 done</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJlbnNlbWJsXCIpKXtcbiAgZW5zZW1ibCA9IHVzZU1hcnQoXCJlbnNlbWJsXCIsIGRhdGFzZXQgPSBcImhzYXBpZW5zX2dlbmVfZW5zZW1ibFwiKVxufVxuXG5HZW5lc19kaWZmZXJlbnRpYWxseV9leHByZXNzZWQgPC0gYWRkX2dlbmVzX2Nvb3JkaW5hdGVzKEdlbmVfZXhwcmVzc2lvbl9jb21wYXJpc29uW1sxXV0pICU+JSBmaWx0ZXIoLiwgKGxvZ0ZDKioyID4gMi4yNSAmIFAuVmFsdWUgPCAwLjA1ICYgaGduY19zeW1ib2wgIT0gXCJcIikpICU+JSBkcGx5cjo6c2VsZWN0KC4sIGxvZ0ZDLCBBdmVFeHByLCBQLlZhbHVlLCBoZ25jX3N5bWJvbClcblxuR2VuZXNfZGlmZmVyZW50aWFsbHlfZXhwcmVzc2VkJHNlbnMgPC0gaWZlbHNlKEdlbmVzX2RpZmZlcmVudGlhbGx5X2V4cHJlc3NlZCRsb2dGQyA+IDAsIFwidXBfcmVndWxhdGVkXCIsIFwiZG93bl9yZWd1bGF0ZWRcIilcblxud3JpdGUuY3N2KEdlbmVzX2RpZmZlcmVudGlhbGx5X2V4cHJlc3NlZCwgXCIuLi9SZXN1bHRzL0dlbmVzX2RpZmZlcmVudGlhbGx5X2V4cHJlc3NlZC5jc3ZcIilcbmBgYCJ9 -->
+<pre class="r"><code>if (!exists(&quot;ensembl&quot;)){
+  ensembl = useMart(&quot;ensembl&quot;, dataset = &quot;hsapiens_gene_ensembl&quot;)
+}
+
+Genes_differentially_expressed &lt;- add_genes_coordinates(Gene_expression_comparison[[1]]) %&gt;% filter(., (logFC**2 &gt; 2.25 &amp; P.Value &lt; 0.05 &amp; hgnc_symbol != &quot;&quot;)) %&gt;% dplyr::select(., logFC, AveExpr, P.Value, hgnc_symbol)
+
+Genes_differentially_expressed$sens &lt;- ifelse(Genes_differentially_expressed$logFC &gt; 0, &quot;up_regulated&quot;, &quot;down_regulated&quot;)
+
+write.csv(Genes_differentially_expressed, &quot;../Results/Genes_differentially_expressed.csv&quot;)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuQ3BHc19kaWZmZXJlbnRpYWxseV9tZXRoeWxhdGVkIDwtIE1ldGh5bGF0aW9uX0NvbXBhcmlzb25bWzFdXSAlPiUgZmlsdGVyKC4sIChQLlZhbHVlIDwgMC4wNSAmIGxvZ0ZDKioyID4gMC4zKioyKSlcblxuQ3BHc19kaWZmZXJlbnRpYWxseV9tZXRoeWxhdGVkJHNlbnMgPC0gaWZlbHNlKENwR3NfZGlmZmVyZW50aWFsbHlfbWV0aHlsYXRlZCRsb2dGQyA+IDAsIFwiaHlwZXJtZXRoeWxhdGVkXCIsIFwiaHlwb21ldGh5bGF0ZWRcIilcblxud3JpdGUuY3N2KENwR3NfZGlmZmVyZW50aWFsbHlfbWV0aHlsYXRlZCwgXCIuLi9SZXN1bHRzL0NwR3NfZGlmZmVyZW50aWFsbHlfbWV0aHlsYXRlZC5jc3ZcIilcblxuYGBgIn0= -->
+<pre class="r"><code>CpGs_differentially_methylated &lt;- Methylation_Comparison[[1]] %&gt;% filter(., (P.Value &lt; 0.05 &amp; logFC**2 &gt; 0.3**2))
+
+CpGs_differentially_methylated$sens &lt;- ifelse(CpGs_differentially_methylated$logFC &gt; 0, &quot;hypermethylated&quot;, &quot;hypomethylated&quot;)
+
+write.csv(CpGs_differentially_methylated, &quot;../Results/CpGs_differentially_methylated.csv&quot;)
+</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiRGF0YSBhbmFseXNpcyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKCgpgYGB7cn0KaWYgKCFleGlzdHMoImEiKSl7CiAgc291cmNlKCJmdW5jdGlvbnMuUiIpCiAgc291cmNlKCJwYWNrYWdlcy5SIikKICAjIGEgPC0gMAp9CmBgYAoKYGBge3J9CmlmICghZXhpc3RzKCJNZXRoeWxhdGlvbl9kYXRhIikpewogIE1ldGh5bGF0aW9uX2RhdGEgPC0gcmVhZC5jc3YoIi4uL0RBVEFfdGVzdC9CTUlRX3Rlc3QuY3N2IikKICByb3duYW1lcyhNZXRoeWxhdGlvbl9kYXRhKSA8LSBNZXRoeWxhdGlvbl9kYXRhJFgKICBNZXRoeWxhdGlvbl9kYXRhIDwtIE1ldGh5bGF0aW9uX2RhdGFbLDM6MjFdCn0KaWYgKCFleGlzdHMoIkdlbmVfZXhwcmVzc2lvbl9kYXRhIikpewogIEdlbmVfZXhwcmVzc2lvbl9kYXRhIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3YiKSAlPiUgdm9vbSguLCBkZXNpZ24sIHBsb3QgPSBGQUxTRSkKfQpQaGVub3R5cGUgPC0gcmVhZC5jc3YoIi4uL0RBVEFfdGVzdC9QaGVub3R5cGVfbWV0LmNzdiIpCmBgYAoKYGBge3J9Ck1ldGh5bGF0aW9uX0NvbXBhcmlzb24gPC0gRGlmZmVyZW50aWFsX2FuYWx5c2lzKFBoZW5vdHlwZSRJREgsIE1ldGh5bGF0aW9uX2RhdGEpCgoKYGBgCgoKYGBge3J9CgpgYGAKCg==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiRGF0YSBhbmFseXNpcyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKCgpgYGB7cn0KaWYgKCFleGlzdHMoImEiKSl7CiAgc291cmNlKCJmdW5jdGlvbnMuUiIpCiAgc291cmNlKCJwYWNrYWdlcy5SIikKICAjIGEgPC0gMAp9CmBgYAoKYGBge3J9CmlmICghZXhpc3RzKCJNZXRoeWxhdGlvbl9kYXRhIikpewogIE1ldGh5bGF0aW9uX2RhdGEgPC0gcmVhZC5jc3YoIi4uL0RBVEFfdGVzdC9CTUlRX3Rlc3QuY3N2IikKICByb3duYW1lcyhNZXRoeWxhdGlvbl9kYXRhKSA8LSBNZXRoeWxhdGlvbl9kYXRhJFgKICBNZXRoeWxhdGlvbl9kYXRhIDwtIE1ldGh5bGF0aW9uX2RhdGFbLDM6MjFdCn0KaWYgKCFleGlzdHMoIkdlbmVfZXhwcmVzc2lvbl9kYXRhIikpewogIEdlbmVfZXhwcmVzc2lvbl9kYXRhIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3YiKQogIHJvd25hbWVzKEdlbmVfZXhwcmVzc2lvbl9kYXRhKSA8LSBHZW5lX2V4cHJlc3Npb25fZGF0YSRYCiAgR2VuZV9leHByZXNzaW9uX2RhdGEgPC0gR2VuZV9leHByZXNzaW9uX2RhdGFbLDM6MjFdCn0KUGhlbm90eXBlIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvUGhlbm90eXBlX21ldC5jc3YiKQpgYGAKCmBgYHtyfQpNZXRoeWxhdGlvbl9Db21wYXJpc29uIDwtIERpZmZlcmVudGlhbF9hbmFseXNpcyhQaGVub3R5cGUkSURILCBNZXRoeWxhdGlvbl9kYXRhLCB0eXBlX29mX2RhdGEgPSAibWV0aHlsYXRpb24iKQpHZW5lX2V4cHJlc3Npb25fY29tcGFyaXNvbiA8LSBEaWZmZXJlbnRpYWxfYW5hbHlzaXMoUGhlbm90eXBlJElESCwgR2VuZV9leHByZXNzaW9uX2RhdGEsIHR5cGVfb2ZfZGF0YSA9ICJnZW5lX2V4cHJlc3Npb24iKQpgYGAKYGBge3J9CmlmICghZXhpc3RzKCJlbnNlbWJsIikpewogIGVuc2VtYmwgPSB1c2VNYXJ0KCJlbnNlbWJsIiwgZGF0YXNldCA9ICJoc2FwaWVuc19nZW5lX2Vuc2VtYmwiKQp9CgpHZW5lc19kaWZmZXJlbnRpYWxseV9leHByZXNzZWQgPC0gYWRkX2dlbmVzX2Nvb3JkaW5hdGVzKEdlbmVfZXhwcmVzc2lvbl9jb21wYXJpc29uW1sxXV0pICU+JSBmaWx0ZXIoLiwgKGxvZ0ZDKioyID4gMi4yNSAmIFAuVmFsdWUgPCAwLjA1ICYgaGduY19zeW1ib2wgIT0gIiIpKSAlPiUgZHBseXI6OnNlbGVjdCguLCBsb2dGQywgQXZlRXhwciwgUC5WYWx1ZSwgaGduY19zeW1ib2wpCgpHZW5lc19kaWZmZXJlbnRpYWxseV9leHByZXNzZWQkc2VucyA8LSBpZmVsc2UoR2VuZXNfZGlmZmVyZW50aWFsbHlfZXhwcmVzc2VkJGxvZ0ZDID4gMCwgInVwX3JlZ3VsYXRlZCIsICJkb3duX3JlZ3VsYXRlZCIpCgp3cml0ZS5jc3YoR2VuZXNfZGlmZmVyZW50aWFsbHlfZXhwcmVzc2VkLCAiLi4vUmVzdWx0cy9HZW5lc19kaWZmZXJlbnRpYWxseV9leHByZXNzZWQuY3N2IikKYGBgCgpgYGB7cn0KQ3BHc19kaWZmZXJlbnRpYWxseV9tZXRoeWxhdGVkIDwtIE1ldGh5bGF0aW9uX0NvbXBhcmlzb25bWzFdXSAlPiUgZmlsdGVyKC4sIChQLlZhbHVlIDwgMC4wNSAmIGxvZ0ZDKioyID4gMC4zKioyKSkKCkNwR3NfZGlmZmVyZW50aWFsbHlfbWV0aHlsYXRlZCRzZW5zIDwtIGlmZWxzZShDcEdzX2RpZmZlcmVudGlhbGx5X21ldGh5bGF0ZWQkbG9nRkMgPiAwLCAiaHlwZXJtZXRoeWxhdGVkIiwgImh5cG9tZXRoeWxhdGVkIikKCndyaXRlLmNzdihDcEdzX2RpZmZlcmVudGlhbGx5X21ldGh5bGF0ZWQsICIuLi9SZXN1bHRzL0NwR3NfZGlmZmVyZW50aWFsbHlfbWV0aHlsYXRlZC5jc3YiKQpgYGAKCg==</div>
 
 
 

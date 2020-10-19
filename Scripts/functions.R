@@ -1,4 +1,4 @@
-Differential_analysis <- function(Focused_variable, DATA){
+Differential_analysis <- function(Focused_variable, DATA, type_of_data){
   design.pairs <- function(levels) {
     n <- length(levels)
     design <- matrix(0,n,choose(n,2))
@@ -15,6 +15,9 @@ Differential_analysis <- function(Focused_variable, DATA){
     design
   }
   design <- model.matrix(~0 + Focused_variable)
+  if (type_of_data == "gene_expression"){
+    DATA <- voom(DATA, design, plot = FALSE)
+  }
   contr.matrix <- design.pairs(levels(factor(Focused_variable)))
   colnames(design) <- rownames(contr.matrix)   
   Fit <- lmFit(DATA, design) %>%
@@ -32,4 +35,34 @@ Differential_analysis <- function(Focused_variable, DATA){
   names(FitList) <- colnames(contr.matrix)
   return(FitList)
   
+}
+
+add_genes_coordinates <- function(vector_of_genes) {
+  
+  # Download homo sapiens genes ensembl database
+  
+  # 
+  gene_name_annotation <- getBM(attributes = c('ensembl_gene_id', 'hgnc_symbol', 'entrezgene_id'), filters = 'ensembl_gene_id', values = vector_of_genes$ID, mart = ensembl)
+  genes_annoted <- merge(x = vector_of_genes, y = gene_name_annotation, by.x = "ID", by.y = "ensembl_gene_id", all.x = TRUE)
+  return(genes_annoted)
+}
+
+prepare_pchic <- function(cell_lines, minimum_interaction){
+  load("../pchic.RData")
+  pchic <- data.frame(pchic[rowSums(pchic[,cell_lines] >= minimum_interaction) >= 1, 1:10]) %>% na.omit(.)
+  colnames(pchic)[c(1:5, 6:10)] <- rep(c("chr", "start", "end", "ID", "Name"), 2)
+  return(pchic)
+}
+
+Create_pchic_Grange <- function(pchic){
+  PCHiC_bed <- unique(rbind(pchic[, c(1:3, 5)], pchic[, c(6:8, 10)]))
+  PCHiC_GRange <- GRanges(
+    seqnames = PCHiC_bed$chr,
+    IRanges(start = PCHiC_bed$start, end = PCHiC_bed$end),
+    Gene_Pchic = PCHiC_bed$Name,
+    start_fragment = PCHiC_bed$start,
+    end_fragment = PCHiC_bed$end
+  )
+  PCHiC_GRange$ID <- paste(PCHiC_bed$chr, PCHiC_bed$start, sep = "_")
+  return(PCHiC_GRange)
 }

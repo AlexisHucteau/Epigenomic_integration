@@ -1760,31 +1760,44 @@ summary {
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJhXCIpKXtcbiAgc291cmNlKFwiZnVuY3Rpb25zLlJcIilcbiAgc291cmNlKFwicGFja2FnZXMuUlwiKVxuICBhIDwtIDBcbn1cbmBgYCJ9 -->
-<pre class="r"><code>if (!exists(&quot;a&quot;)){
-  source(&quot;functions.R&quot;)
-  source(&quot;packages.R&quot;)
-  a &lt;- 0
-}</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuICBzb3VyY2UoXCJmdW5jdGlvbnMuUlwiKVxuXG5gYGAifQ== -->
+<pre class="r"><code>  source(&quot;functions.R&quot;)
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gc291cmNlKFwiZnVuY3Rpb25zLlJcIikgOiBmdW5jdGlvbnMuUjo2ODoxOiAnfScgaW5hdHRlbmR1KGUpXG42NzogICByZXR1cm4oUENIaUNfR1JhbmdlKVxuNjg6IH1cbiAgICBeXG4ifQ== -->
+<pre><code>Error in source(&quot;functions.R&quot;) : functions.R:68:1: &#39;}&#39; inattendu(e)
+67:   return(PCHiC_GRange)
+68: }
+    ^</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuVGFibGVfb2ZfZ2VuZXMgPC0gcmVhZC5jc3YoXCIuLi9SZXN1bHRzL0dlbmVzX2RpZmZlcmVudGlhbGx5X2V4cHJlc3NlZC5jc3ZcIilcblxuVGFibGVfb2ZfbWV0aHlsYXRpb25zIDwtIHJlYWQuY3N2KFwiLi4vUmVzdWx0cy9DcEdzX2RpZmZlcmVudGlhbGx5X21ldGh5bGF0ZWQuY3N2XCIpXG5gYGAifQ== -->
+<pre class="r"><code>Table_of_genes &lt;- read.csv(&quot;../Results/Genes_differentially_expressed.csv&quot;)
+
+Table_of_methylations &lt;- read.csv(&quot;../Results/CpGs_differentially_methylated.csv&quot;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuVGFibGVfb2ZfZ2VuZXMgPC0gcmVhZC5jc3YoXCJcIilcblxuVGFibGVfb2ZfbWV0aHlsYXRpb25zIDwtIHJlYWQuY3N2KFwiXCIpXG5gYGAifQ== -->
-<pre class="r"><code>Table_of_genes &lt;- read.csv(&quot;&quot;)
-
-Table_of_methylations &lt;- read.csv(&quot;&quot;)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuQmx1ZXByaW50X25ldHdvcmsgPC0gcmVhZC5jc3YoXCIuLi9CTFVFUFJJTlRfZnJhZ21lbnRzX2dvb2QudHN2XCIsIHNlcCA9IFwiXFx0XCIsIHN0cmluZ3NBc0ZhY3RvcnMgPSBGKSAlPiVcbiAgZHBseXI6OnNlbGVjdCguLCBcImNoclwiLCBcInN0YXJ0XCIsIFwiZW5kXCIsIFwidHlwZVwiLCBcImVuc2VtYmxcIiwgXCJnZW5lX25hbWVzXCIsIFwiaW50cm9uaWNfcmVnaW9uc1wiLCBcInR5cGVcIikgJT4lIFxuICBzZXBhcmF0ZV9yb3dzKC4sIGdlbmVfbmFtZXMsIHNlcCA9IFwiIFwiKVxuXG5gYGAifQ== -->
+<pre class="r"><code>Blueprint_network &lt;- read.csv(&quot;../BLUEPRINT_fragments_good.tsv&quot;, sep = &quot;\t&quot;, stringsAsFactors = F) %&gt;%
+  dplyr::select(., &quot;chr&quot;, &quot;start&quot;, &quot;end&quot;, &quot;type&quot;, &quot;ensembl&quot;, &quot;gene_names&quot;, &quot;intronic_regions&quot;, &quot;type&quot;) %&gt;% 
+  separate_rows(., gene_names, sep = &quot; &quot;)
+</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
+<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gc2VwYXJhdGVfcm93cyguLCBnZW5lX25hbWVzLCBzZXAgPSBcIiBcIikgOiBcbiAgaW1wb3NzaWJsZSBkZSB0cm91dmVyIGxhIGZvbmN0aW9uIFwic2VwYXJhdGVfcm93c1wiXG4ifQ== -->
+<pre><code>Error in separate_rows(., gene_names, sep = &quot; &quot;) : 
+  impossible de trouver la fonction &quot;separate_rows&quot;</code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiUiBOb3RlYm9vayIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKYGBge3J9CmlmICghZXhpc3RzKCJhIikpewogIHNvdXJjZSgiZnVuY3Rpb25zLlIiKQogIHNvdXJjZSgicGFja2FnZXMuUiIpCiAgYSA8LSAwCn0KYGBgCgpgYGB7cn0KVGFibGVfb2ZfZ2VuZXMgPC0gcmVhZC5jc3YoIiIpCgpUYWJsZV9vZl9tZXRoeWxhdGlvbnMgPC0gcmVhZC5jc3YoIiIpCmBgYAoKCgpgYGB7cn0KCmBgYAoK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUiBOb3RlYm9vayIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKYGBge3J9CmlmICghZXhpc3RzKCJhIikpewogIHNvdXJjZSgiZnVuY3Rpb25zLlIiKQogIHNvdXJjZSgicGFja2FnZXMuUiIpCiAgIyBhIDwtIDAKfQpgYGAKCmBgYHtyfQpUYWJsZV9vZl9nZW5lcyA8LSByZWFkLmNzdigiLi4vUmVzdWx0cy9HZW5lc19kaWZmZXJlbnRpYWxseV9leHByZXNzZWQuY3N2IikKClRhYmxlX29mX21ldGh5bGF0aW9ucyA8LSByZWFkLmNzdigiLi4vUmVzdWx0cy9DcEdzX2RpZmZlcmVudGlhbGx5X21ldGh5bGF0ZWQuY3N2IikKYGBgCgpgYGB7cn0KIyBDZWxsIHR5cGUgOiAiTW9uIiwgIk1hYzAiLCAiTWFjMSIsICJNYWMyIiwgIk5ldSIsICJNSyIsICJFUCIsICJFcnkiLCAiRm9lVCIsICJuQ0Q0IiwgInRDRDQiLCAiYUNENCIsICJuYUNENCIsICJuQ0Q4IiwgInRDRDgiLCAibkIiLCAidEIiCnBjaGljIDwtIHByZXBhcmVfcGNoaWMoYygiTW9uIiwgIk1hYzAiLCAiTWFjMiIpLCA3KQoKUENIaUNfR1JhbmdlIDwtIENyZWF0ZV9wY2hpY19HcmFuZ2UocGNoaWMpCgpjb2xuYW1lcyhwY2hpYykgPC0gYygiY2hyX2JhaXQiLCAic3RhcnRfYmFpdCIsICJlbmRfYmFpdCIsICJJRF9iYWl0IiwgIk5hbWVfYmFpdCIsICJjaHJfb2UiLCAic3RhcnRfb2UiLCAiZW5kX29lIiwgIklEX29lIiwgIk5hbWVfb2UiKQogIHBjaGljJElEYmFpdCA8LSBwYXN0ZShwY2hpYyRjaHJfYmFpdCwgcGNoaWMkc3RhcnRfYmFpdCwgc2VwID0gIl8iKQogIHBjaGljJElEb2UgPC0gcGFzdGUocGNoaWMkY2hyX29lLCBwY2hpYyRzdGFydF9vZSwgc2VwID0gIl8iKQoKQmx1ZXByaW50X25ldHdvcmsgPC0gcmVhZC5jc3YoIi4uL0JMVUVQUklOVF9mcmFnbWVudHNfZ29vZC50c3YiLCBzZXAgPSAiXHQiLCBzdHJpbmdzQXNGYWN0b3JzID0gRikgJT4lCiAgZHBseXI6OnNlbGVjdCguLCAiY2hyIiwgInN0YXJ0IiwgImVuZCIsICJ0eXBlIiwgImVuc2VtYmwiLCAiZ2VuZV9uYW1lcyIsICJpbnRyb25pY19yZWdpb25zIiwgInR5cGUiKSAlPiUgCiAgc2VwYXJhdGVfcm93cyguLCBnZW5lX25hbWVzLCBzZXAgPSAiICIpCgpCbHVlcHJpbnRfR3JhbmdlcyA8LSBHUmFuZ2VzKAogIHNlcW5hbWVzID0gQmx1ZXByaW50X25ldHdvcmskY2hyLAogIHJhbmdlcyA9IElSYW5nZXMoc3RhcnQgPSBCbHVlcHJpbnRfbmV0d29yayRzdGFydCwgZW5kID0gQmx1ZXByaW50X25ldHdvcmskZW5kKSwKICBHZW5lX25hbWUgPSBCbHVlcHJpbnRfbmV0d29yayRnZW5lX25hbWVzLAogIFByb21vdGVyID0gQmx1ZXByaW50X25ldHdvcmskdHlwZQopCgoKYGBgCgo=</div>
 
 
 

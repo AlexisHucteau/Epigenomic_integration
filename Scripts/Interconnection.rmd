@@ -7,19 +7,37 @@ output: html_notebook
 if (!exists("a")){
   source("functions.R")
   source("packages.R")
-  a <- 0
+  # a <- 0
 }
 ```
 
 ```{r}
-Table_of_genes <- read.csv("")
+Table_of_genes <- read.csv("../Results/Genes_differentially_expressed.csv")
 
-Table_of_methylations <- read.csv("")
+Table_of_methylations <- read.csv("../Results/CpGs_differentially_methylated.csv")
 ```
 
-
-
 ```{r}
+# Cell type : "Mon", "Mac0", "Mac1", "Mac2", "Neu", "MK", "EP", "Ery", "FoeT", "nCD4", "tCD4", "aCD4", "naCD4", "nCD8", "tCD8", "nB", "tB"
+pchic <- prepare_pchic(c("Mon", "Mac0", "Mac2"), 7)
+
+PCHiC_GRange <- Create_pchic_Grange(pchic)
+
+colnames(pchic) <- c("chr_bait", "start_bait", "end_bait", "ID_bait", "Name_bait", "chr_oe", "start_oe", "end_oe", "ID_oe", "Name_oe")
+  pchic$IDbait <- paste(pchic$chr_bait, pchic$start_bait, sep = "_")
+  pchic$IDoe <- paste(pchic$chr_oe, pchic$start_oe, sep = "_")
+
+Blueprint_network <- read.csv("../BLUEPRINT_fragments_good.tsv", sep = "\t", stringsAsFactors = F) %>%
+  dplyr::select(., "chr", "start", "end", "type", "ensembl", "gene_names", "intronic_regions", "type") %>% 
+  separate_rows(., gene_names, sep = " ")
+
+Blueprint_Granges <- GRanges(
+  seqnames = Blueprint_network$chr,
+  ranges = IRanges(start = Blueprint_network$start, end = Blueprint_network$end),
+  Gene_name = Blueprint_network$gene_names,
+  Promoter = Blueprint_network$type
+)
+
 
 ```
 

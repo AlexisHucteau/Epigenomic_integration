@@ -1,2 +1,5 @@
 library(dplyr)
 library(limma)
+library(biomaRt)
+library(GenomicRanges)
+library(tidyr)
