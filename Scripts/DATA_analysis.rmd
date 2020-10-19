@@ -1,12 +1,29 @@
 ---
-title: "R Notebook"
+title: "Data analysis"
 output: html_notebook
 ---
 
 
 
+```{r}
+if (!exists("a")){
+  source("functions.R")
+  source("packages.R")
+  a <- 0
+}
+```
 
 ```{r}
+if (!exists("Methylation_data")){
+  Methylation_data <- read.csv("../DATA_test/BMIQ_test.csv")
+}
+if (!exists("Gene_expression_data")){
+  Gene_expression_data <- read.csv("../DATA_test/DATA_RNA_test.csv")
+}
+Phenotype_meth <- read.csv("../DATA_test/Phenotype_met.csv")
+
+Phenotype_GE <- read.csv("../DATA_test/Phenotype_RNAseq.csv")
+
 
 ```
 
