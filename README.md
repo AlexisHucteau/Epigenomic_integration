@@ -22,4 +22,15 @@ Counts
 
 * IV Spatial association
   * Associate Genes the coordinates of their promoter.
-  * Associate CpGs to 
+  * Associate CpGs to
+
+
+## Scripts
+
+#### Functions.R
+
+
+#### DATA_analysis.Rmd
+Do a differencial expression analysis on
+
+#### Interconnection.Rmd
