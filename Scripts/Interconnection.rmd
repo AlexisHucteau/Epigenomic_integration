@@ -3,3 +3,23 @@ title: "R Notebook"
 output: html_notebook
 ---
 
+```{r}
+if (!exists("a")){
+  source("functions.R")
+  source("packages.R")
+  a <- 0
+}
+```
+
+```{r}
+Table_of_genes <- read.csv("")
+
+Table_of_methylations <- read.csv("")
+```
+
+
+
+```{r}
+
+```
+

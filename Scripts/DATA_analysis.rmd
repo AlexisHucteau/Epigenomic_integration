@@ -9,21 +9,30 @@ output: html_notebook
 if (!exists("a")){
   source("functions.R")
   source("packages.R")
-  a <- 0
+  # a <- 0
 }
 ```
 
 ```{r}
 if (!exists("Methylation_data")){
   Methylation_data <- read.csv("../DATA_test/BMIQ_test.csv")
+  rownames(Methylation_data) <- Methylation_data$X
+  Methylation_data <- Methylation_data[,3:21]
 }
 if (!exists("Gene_expression_data")){
-  Gene_expression_data <- read.csv("../DATA_test/DATA_RNA_test.csv")
+  Gene_expression_data <- read.csv("../DATA_test/DATA_RNA_test.csv") %>% voom(., design, plot = FALSE)
 }
-Phenotype_meth <- read.csv("../DATA_test/Phenotype_met.csv")
+Phenotype <- read.csv("../DATA_test/Phenotype_met.csv")
+```
 
-Phenotype_GE <- read.csv("../DATA_test/Phenotype_RNAseq.csv")
+```{r}
+Methylation_Comparison <- Differential_analysis(Phenotype$IDH, Methylation_data)
 
+
+```
+
+
+```{r}
 
 ```
 

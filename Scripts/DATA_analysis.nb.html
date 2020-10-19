@@ -1760,43 +1760,47 @@ summary {
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2V0d2QoXCJ+L1RoZXNpcy9Qcm9qZWN0cy9FcGlnZW5vbWljX2ludGVncmF0aW9uL1wiKVxuYGBgIn0= -->
-<pre class="r"><code>setwd(&quot;~/Thesis/Projects/Epigenomic_integration/&quot;)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiVGhlIHdvcmtpbmcgZGlyZWN0b3J5IHdhcyBjaGFuZ2VkIHRvIC9ob21lL2FsZXhpcy9UaGVzaXMvUHJvamVjdHMvRXBpZ2Vub21pY19pbnRlZ3JhdGlvbiBpbnNpZGUgYSBub3RlYm9vayBjaHVuay4gVGhlIHdvcmtpbmcgZGlyZWN0b3J5IHdpbGwgYmUgcmVzZXQgd2hlbiB0aGUgY2h1bmsgaXMgZmluaXNoZWQgcnVubmluZy4gVXNlIHRoZSBrbml0ciByb290LmRpciBvcHRpb24gaW4gdGhlIHNldHVwIGNodW5rIHRvIGNoYW5nZSB0aGUgd29ya2luZyBkaXJlY3RvcnkgZm9yIG5vdGVib29rIGNodW5rcy5cbiJ9 -->
-<pre><code>The working directory was changed to /home/alexis/Thesis/Projects/Epigenomic_integration inside a notebook chunk. The working directory will be reset when the chunk is finished running. Use the knitr root.dir option in the setup chunk to change the working directory for notebook chunks.</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZ2V0d2QoKVxuYGBgIn0= -->
-<pre class="r"><code>getwd()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwiL2hvbWUvYWxleGlzL1RoZXNpcy9Qcm9qZWN0cy9FcGlnZW5vbWljX2ludGVncmF0aW9uXCJcbiJ9 -->
-<pre><code>[1] &quot;/home/alexis/Thesis/Projects/Epigenomic_integration&quot;</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJhXCIpKXtcbiAgc291cmNlKFwiU2NyaXB0cy9mdW5jdGlvbnMuUlwiKVxuICBzb3VyY2UoXCJTY3JpcHRzL3BhY2thZ2VzLlJcIilcbiAgYSA8LSAwXG59XG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJhXCIpKXtcbiAgc291cmNlKFwiZnVuY3Rpb25zLlJcIilcbiAgc291cmNlKFwicGFja2FnZXMuUlwiKVxuICAjIGEgPC0gMFxufVxuYGBgIn0= -->
 <pre class="r"><code>if (!exists(&quot;a&quot;)){
-  source(&quot;Scripts/functions.R&quot;)
-  source(&quot;Scripts/packages.R&quot;)
-  a &lt;- 0
+  source(&quot;functions.R&quot;)
+  source(&quot;packages.R&quot;)
+  # a &lt;- 0
 }</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJNZXRoeWxhdGlvbl9kYXRhXCIpKXtcbiAgTWV0aHlsYXRpb25fZGF0YSA8LSByZWFkLmNzdihcIi4uL0RBVEFfdGVzdC9CTUlRX3Rlc3QuY3N2XCIpXG59XG5pZiAoIWV4aXN0cyhcIkdlbmVfZXhwcmVzc2lvbl9kYXRhXCIpKXtcbiAgR2VuZV9leHByZXNzaW9uX2RhdGEgPC0gcmVhZC5jc3YoXCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3ZcIilcbn1cblxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFleGlzdHMoXCJNZXRoeWxhdGlvbl9kYXRhXCIpKXtcbiAgTWV0aHlsYXRpb25fZGF0YSA8LSByZWFkLmNzdihcIi4uL0RBVEFfdGVzdC9CTUlRX3Rlc3QuY3N2XCIpXG4gIHJvd25hbWVzKE1ldGh5bGF0aW9uX2RhdGEpIDwtIE1ldGh5bGF0aW9uX2RhdGEkWFxuICBNZXRoeWxhdGlvbl9kYXRhIDwtIE1ldGh5bGF0aW9uX2RhdGFbLDM6MjFdXG59XG5pZiAoIWV4aXN0cyhcIkdlbmVfZXhwcmVzc2lvbl9kYXRhXCIpKXtcbiAgR2VuZV9leHByZXNzaW9uX2RhdGEgPC0gcmVhZC5jc3YoXCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3ZcIilcbn1cblBoZW5vdHlwZSA8LSByZWFkLmNzdihcIi4uL0RBVEFfdGVzdC9QaGVub3R5cGVfbWV0LmNzdlwiKVxuYGBgIn0= -->
 <pre class="r"><code>if (!exists(&quot;Methylation_data&quot;)){
   Methylation_data &lt;- read.csv(&quot;../DATA_test/BMIQ_test.csv&quot;)
+  rownames(Methylation_data) &lt;- Methylation_data$X
+  Methylation_data &lt;- Methylation_data[,3:21]
 }
 if (!exists(&quot;Gene_expression_data&quot;)){
   Gene_expression_data &lt;- read.csv(&quot;../DATA_test/DATA_RNA_test.csv&quot;)
 }
-</code></pre>
+Phenotype &lt;- read.csv(&quot;../DATA_test/Phenotype_met.csv&quot;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuQ29tcGFyaXNvbiA8LSBEaWZmZXJlbnRpYWxfYW5hbHlzaXMoUGhlbm90eXBlJElESCwgTWV0aHlsYXRpb25fZGF0YSlcbmBgYCJ9 -->
+<pre class="r"><code>Comparison &lt;- Differential_analysis(Phenotype$IDH, Methylation_data)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiMSBkb25lXG4ifQ== -->
+<pre><code>1 done</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiRGF0YSBhbmFseXNpcyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKCgpgYGB7cn0KaWYgKCFleGlzdHMoImEiKSl7CiAgc291cmNlKCJmdW5jdGlvbnMuUiIpCiAgc291cmNlKCJwYWNrYWdlcy5SIikKICBhIDwtIDAKfQpgYGAKCmBgYHtyfQppZiAoIWV4aXN0cygiTWV0aHlsYXRpb25fZGF0YSIpKXsKICBNZXRoeWxhdGlvbl9kYXRhIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvQk1JUV90ZXN0LmNzdiIpCn0KaWYgKCFleGlzdHMoIkdlbmVfZXhwcmVzc2lvbl9kYXRhIikpewogIEdlbmVfZXhwcmVzc2lvbl9kYXRhIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3YiKQp9ClBoZW5vdHlwZV9tZXRoIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvUGhlbm90eXBlX21ldC5jc3YiKQoKUGhlbm90eXBlX0dFIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvUGhlbm90eXBlX1JOQXNlcS5jc3YiKQoKCmBgYAoK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiRGF0YSBhbmFseXNpcyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKCgpgYGB7cn0KaWYgKCFleGlzdHMoImEiKSl7CiAgc291cmNlKCJmdW5jdGlvbnMuUiIpCiAgc291cmNlKCJwYWNrYWdlcy5SIikKICAjIGEgPC0gMAp9CmBgYAoKYGBge3J9CmlmICghZXhpc3RzKCJNZXRoeWxhdGlvbl9kYXRhIikpewogIE1ldGh5bGF0aW9uX2RhdGEgPC0gcmVhZC5jc3YoIi4uL0RBVEFfdGVzdC9CTUlRX3Rlc3QuY3N2IikKICByb3duYW1lcyhNZXRoeWxhdGlvbl9kYXRhKSA8LSBNZXRoeWxhdGlvbl9kYXRhJFgKICBNZXRoeWxhdGlvbl9kYXRhIDwtIE1ldGh5bGF0aW9uX2RhdGFbLDM6MjFdCn0KaWYgKCFleGlzdHMoIkdlbmVfZXhwcmVzc2lvbl9kYXRhIikpewogIEdlbmVfZXhwcmVzc2lvbl9kYXRhIDwtIHJlYWQuY3N2KCIuLi9EQVRBX3Rlc3QvREFUQV9STkFfdGVzdC5jc3YiKSAlPiUgdm9vbSguLCBkZXNpZ24sIHBsb3QgPSBGQUxTRSkKfQpQaGVub3R5cGUgPC0gcmVhZC5jc3YoIi4uL0RBVEFfdGVzdC9QaGVub3R5cGVfbWV0LmNzdiIpCmBgYAoKYGBge3J9Ck1ldGh5bGF0aW9uX0NvbXBhcmlzb24gPC0gRGlmZmVyZW50aWFsX2FuYWx5c2lzKFBoZW5vdHlwZSRJREgsIE1ldGh5bGF0aW9uX2RhdGEpCgoKYGBgCgoKYGBge3J9CgpgYGAKCg==</div>
 
 
 
