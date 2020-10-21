@@ -38,17 +38,16 @@ Differential_analysis <- function(Focused_variable, DATA, type_of_data){
 }
 
 add_genes_coordinates <- function(vector_of_genes) {
-  
-  # Download homo sapiens genes ensembl database
-  
-  # 
   gene_name_annotation <- getBM(attributes = c('ensembl_gene_id', 'hgnc_symbol', 'entrezgene_id'), filters = 'ensembl_gene_id', values = vector_of_genes$ID, mart = ensembl)
   genes_annoted <- merge(x = vector_of_genes, y = gene_name_annotation, by.x = "ID", by.y = "ensembl_gene_id", all.x = TRUE)
   return(genes_annoted)
 }
 
-prepare_pchic <- function(cell_lines, minimum_interaction){
+prepare_pchic <- function(cell_lines = "all", minimum_interaction = 5){
   load("../pchic.RData")
+  if (cell_lines == "all") {
+    cell_lines = c("Mon", "Mac0", "Mac1", "Mac2", "Neu", "MK", "EP", "Ery", "FoeT", "nCD4", "tCD4", "aCD4", "naCD4", "nCD8", "tCD8", "nB", "tB")
+    }
   pchic <- data.frame(pchic[rowSums(pchic[,cell_lines] >= minimum_interaction) >= 1, 1:10]) %>% na.omit(.)
   colnames(pchic)[c(1:5, 6:10)] <- rep(c("chr", "start", "end", "ID", "Name"), 2)
   return(pchic)

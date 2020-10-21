@@ -51,7 +51,7 @@ CpGs_differentially_methylated$sens <- ifelse(CpGs_differentially_methylated$log
 ```
 
 ```{r}
-if (length(Table_of_methylations$X > 450000)) {
+if (length(rownames(Methylation_data) > 450000)) {
   if (!exists("annoEPIC")){
     anno <- read.csv("~/infinium-methylationepic-v-1-0-b5-manifest-file-csv/infinium-methylationepic-v-1-0-b5-manifest-file.csv", skip = 7) %>% dplyr::select(., "Name", "CHR", "MAPINFO", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_UCSC_CpG_Island")
   }

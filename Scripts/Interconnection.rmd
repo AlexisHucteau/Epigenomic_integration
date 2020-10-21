@@ -17,7 +17,7 @@ Table_of_methylations <- read.csv("../Results/CpGs_differentially_methylated.csv
 
 ```{r}
 # Cell type : "Mon", "Mac0", "Mac1", "Mac2", "Neu", "MK", "EP", "Ery", "FoeT", "nCD4", "tCD4", "aCD4", "naCD4", "nCD8", "tCD8", "nB", "tB"
-pchic <- prepare_pchic(c("Mon", "Mac0", "Mac2"), 7)
+pchic <- prepare_pchic()
 
 PCHiC_GRange <- Create_pchic_Grange(pchic)
 
@@ -97,6 +97,21 @@ CpGs_not_promoter <- unique(match_hit_CpGs_Blueprint[match_hit_CpGs_Blueprint$Pr
 ```{r}
 Genes_overlap_in_promoter <- CpGs_promoter[CpGs_promoter$Gene_name %in% Table_of_genes$hgnc_symbol,] %>% 
   merge(., Table_of_genes, by.x = "Gene_name", by.y = "hgnc_symbol")
+
+write.csv(Genes_overlap_in_promoter, file = "../Results/Genes_overlap_in_promoter.csv", row.names = FALSE)
+```
+
+#### Summarize methylation regulation in promoter
+
+```{r}
+Gene_UP_Meth_UP <- Genes_overlap_in_promoter %>% dplyr::filter(., sens == "up_regulated" & sens_of_methylation == "hypermethylated")
+Gene_UP_Meth_DOWN <- Genes_overlap_in_promoter %>% dplyr::filter(., sens == "up_regulated" & sens_of_methylation == "hypomethylated")
+Gene_DOWN_Meth_UP <- Genes_overlap_in_promoter %>% dplyr::filter(., sens == "down_regulated" & sens_of_methylation == "hypermethylated")
+Gene_DOWN_Meth_DOWN <- Genes_overlap_in_promoter %>% dplyr::filter(., sens == "down_regulated" & sens_of_methylation == "hypomethylated")
+
+Sum_prom_regulation <- data.frame("Gene_UP_Meth_UP" = length(Gene_UP_Meth_UP$Gene_name), "Gene_UP_Meth_DOWN" = length(Gene_UP_Meth_DOWN$Gene_name), "Gene_DOWN_Meth_UP" = length(Gene_DOWN_Meth_UP$Gene_name), "Gene_DOWN_Meth_DOWN" = length(Gene_DOWN_Meth_DOWN$Gene_name))
+
+write.csv(Sum_prom_regulation, file = "../Results/Summary_of_shortrange_regulation.csv", row.names = FALSE)
 ```
 
 
@@ -123,6 +138,24 @@ Genes_DE_connected_to_CpGs_DM <- Promoter_neighbors[Promoter_neighbors$Gene_name
 
 #### Analysis of the connections
 ```{r}
+Genes_DE_connections <- unique(rbind(pchic[pchic$IDbait %in% Genes_DE_connected_to_CpGs_DM$ID,],pchic[pchic$IDoe %in% match_hit_CpGs_Pchic$ID,]))[,c(1:3,11, 5:8,12, 10)] %>%
+  merge(., Genes_DE_connected_to_CpGs_DM, by.x = "IDbait", by.y = "ID") %>% 
+  dplyr::select(., c("Gene_name", "logFC":"sens", "IDoe")) %>%
+  merge(., match_hit_CpGs_Pchic, by.x = "IDoe", by.y = "ID") %>%
+  dplyr::select(., c("Gene_name":"sens", "sens_of_methylation", "CpG_position"))
 
+write.csv(Genes_DE_connections, file = "../Results/Genes_DE_connections.csv", row.names = FALSE)
 ```
 
+#### Summarize methylation regulation in Oe
+```{r}
+Gene_UP_Oe_Meth_UP <- Genes_DE_connections %>% dplyr::filter(., sens == "up_regulated" & sens_of_methylation == "hypermethylated")
+Gene_UP_Oe_Meth_DOWN <- Genes_DE_connections %>% dplyr::filter(., sens == "up_regulated" & sens_of_methylation == "hypomethylated")
+Gene_DOWN_Oe_Meth_UP <- Genes_DE_connections %>% dplyr::filter(., sens == "down_regulated" & sens_of_methylation == "hypermethylated")
+Gene_DOWN_Oe_Meth_DOWN <- Genes_DE_connections %>% dplyr::filter(., sens == "down_regulated" & sens_of_methylation == "hypomethylated")
+
+Sum_Oe_regulation <- data.frame("Gene_UP_Oe_Meth_UP" = length(Gene_UP_Oe_Meth_UP$Gene_name), "Gene_UP_Oe_Meth_DOWN" = length(Gene_UP_Oe_Meth_DOWN$Gene_name), "Gene_DOWN_Oe_Meth_UP" = length(Gene_DOWN_Oe_Meth_UP$Gene_name), "Gene_DOWN_Oe_Meth_DOWN" = length(Gene_DOWN_Oe_Meth_DOWN$Gene_name))
+
+write.csv(Sum_Oe_regulation, file = "../Results/Summary_of_longrange_regulation.csv", row.names = FALSE)
+
+```
