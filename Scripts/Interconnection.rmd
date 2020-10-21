@@ -139,10 +139,10 @@ Genes_DE_connected_to_CpGs_DM <- Promoter_neighbors[Promoter_neighbors$Gene_name
 #### Analysis of the connections
 ```{r}
 Genes_DE_connections <- unique(rbind(pchic[pchic$IDbait %in% Genes_DE_connected_to_CpGs_DM$ID,],pchic[pchic$IDoe %in% match_hit_CpGs_Pchic$ID,]))[,c(1:3,11, 5:8,12, 10)] %>%
-  merge(., Genes_DE_connected_to_CpGs_DM, by.x = "IDbait", by.y = "ID") %>% 
+   merge(., Genes_DE_connected_to_CpGs_DM, by.x = "IDbait", by.y = "ID") %>% 
   dplyr::select(., c("Gene_name", "logFC":"sens", "IDoe")) %>%
   merge(., match_hit_CpGs_Pchic, by.x = "IDoe", by.y = "ID") %>%
-  dplyr::select(., c("Gene_name":"sens", "sens_of_methylation", "CpG_position"))
+  dplyr::select(., c("Gene_name":"sens", "sens_of_methylation", "CpG_position", "IDoe"))
 
 write.csv(Genes_DE_connections, file = "../Results/Genes_DE_connections.csv", row.names = FALSE)
 ```
@@ -159,3 +159,25 @@ Sum_Oe_regulation <- data.frame("Gene_UP_Oe_Meth_UP" = length(Gene_UP_Oe_Meth_UP
 write.csv(Sum_Oe_regulation, file = "../Results/Summary_of_longrange_regulation.csv", row.names = FALSE)
 
 ```
+
+### Enhancer annotation
+```{r}
+AML_enhancer_annotation <- read.csv("../CD34_enhancer_bed.csv", col.names = c("chrom-Enh", "chromStart", "chromEnd", "enhancer signal"))
+AML_enhancer_annotation$chrom.Enh <- stringr::str_replace(AML_enhancer_annotation$chrom.Enh, "chr", "")
+
+AML_enhancer_Granges <- GRanges(
+  seqnames = AML_enhancer_annotation$chrom.Enh,
+  ranges = IRanges(start = AML_enhancer_annotation$chromStart, end = AML_enhancer_annotation$chromEnd),
+  signal = AML_enhancer_annotation$enhancer.signal
+)
+
+overlaps_enhancer_CpGs <- findOverlaps(AML_enhancer_Granges, PCHiC_GRange)
+match_hit_enhancer_CpGs <- data.frame(mcols(AML_enhancer_Granges[queryHits(overlaps_enhancer_CpGs),]),
+                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_enhancer_CpGs),])))
+```
+
+#### Annotate methylation regulation in Oe
+```{r}
+Genes_DE_connections_enhancer_annotated <- merge(Genes_DE_connections, match_hit_enhancer_CpGs, by.x = "IDoe", by.y = "ID")
+```
+
