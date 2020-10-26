@@ -11,7 +11,8 @@ library(stringr)
 
 "%ni%" <- Negate("%in%")
 
-load("~/Thesis/Projects/Epigenomic_integration/DATA/CD34/Methylation/BMIQ_CD34.RDATA")
+load("~/Thesis/Projects/Epigenomic_integration/DATA/CD34/Methylation/BMIQ_CD34.Rdata")
+load("~/Thesis/Projects/Epigenomic_integration/DATA/IDHm/Methylation/IDHm_BMIQ.Rdata")
 ```
 
 
@@ -42,7 +43,7 @@ Gene_name_finding <- function(gene){
 
 
 ```{r}
-Focus_Gene <- function(gene, DATA_met) {
+Focus_Gene <- function(gene, DATA_met, Phenotype) {
   nb_sample <- length(colnames(DATA_met))
   Blueprint_focused <- dplyr::filter(Blueprint, str_detect(Blueprint$gene_names, gene))
   anno_focused <- anno %>% separate_rows(., UCSC_RefGene_Name, sep = ";") %>%
@@ -88,22 +89,47 @@ Focus_Gene <- function(gene, DATA_met) {
                            rep(Methylation$position, nb_sample)) %>%
     unique(.)
   colnames(Beta_value) <- c("Beta_values", "cpg_localisation", "type", "Illumina_position_reference")
+  Beta_value$Phenotype <- ifelse(str_detect(rownames(Beta_value), "GSM"), "CD34+", "IDHm")
 
-  ggplot(Beta_value, aes(y=Beta_values, x=cpg_localisation, fill=cpg_localisation, colour= type))+
+  ggplot(Beta_value, aes(y=Beta_values, x=Phenotype, fill=cpg_localisation, colour= type))+
     geom_boxplot(alpha=0.25)+
     geom_jitter(width=0.25, alpha=0.25)+
     ggtitle(paste0(gene," Promoter Methylation"))+
     xlab("Position of CpGs")+
     ylab("Value of the methylation")+
   scale_shape_manual(values=c(0,1,2,5,6,7))
+
+  ggsave(
+    filename = paste0("../Results/", gene, "_", Phenotype, "_Promoter_state.png"),
+    plot = last_plot(),
+    device = NULL,
+    path = NULL,
+    scale = 1,
+    width = NA,
+    height = NA,
+    units = c("in", "cm", "mm"),
+    dpi = 300,
+    limitsize = TRUE
+    )
 }
 ```
 
 
 ```{r}
-Gene_name_finding("CEBPA")
+gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
 
-Focus_Gene("CEBPA", BMIQ_CD34)
+for (i in gene_list){
+  Focus_Gene(i, BMIQ_CD34, "CD34+")
+  Focus_Gene(i, BMIQ_IDHm, "IDHm")
+}
+```
+```{r}
+Fusionned_figures <- merge(BMIQ_CD34, BMIQ_IDHm, by.x = 0, by.y = 0)
+rownames(Fusionned_figures) <- Fusionned_figures$Row.names
+Fusionned_figures <- Fusionned_figures[,-1]
 
+for (i in gene_list){
+  Focus_Gene(i, Fusionned_figures, "CD34vsIDHm")
+}
 ```
 
