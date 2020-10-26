@@ -44,7 +44,7 @@ add_genes_coordinates <- function(vector_of_genes) {
 }
 
 prepare_pchic <- function(cell_lines = "all", minimum_interaction = 5){
-  load("../pchic.RData")
+  load("~/PCHIC/pchic.RData")
   if (cell_lines == "all") {
     cell_lines = c("Mon", "Mac0", "Mac1", "Mac2", "Neu", "MK", "EP", "Ery", "FoeT", "nCD4", "tCD4", "aCD4", "naCD4", "nCD8", "tCD8", "nB", "tB")
     }

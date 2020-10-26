@@ -1,0 +1,25 @@
+Row.names,Cord.blood,Organism,cell.type,primary.tissue,DNMT3a.transcript,ID,Sentrix_Position,Sentrix_ID
+GSM2752440,Cord blood 1,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcripts 1+3,9968646132,R01C01,9968646132
+GSM2752441,Cord blood 1,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 2,9968646132,R04C01,9968646132
+GSM2752442,Cord blood 1,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 4,9968646132,R01C02,9968646132
+GSM2752443,Cord blood 1,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: Control,9968646132,R04C02,9968646132
+GSM2752444,Cord blood 2,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcripts 1+3,9968646132,R02C01,9968646132
+GSM2752445,Cord blood 2,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 2,9968646132,R05C01,9968646132
+GSM2752446,Cord blood 2,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 4,9968646132,R02C02,9968646132
+GSM2752447,Cord blood 2,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: Control,9968646132,R05C02,9968646132
+GSM2752448,Cord blood 3,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcripts 1+3,9968646132,R03C01,9968646132
+GSM2752449,Cord blood 3,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 2,9968646132,R06C01,9968646132
+GSM2752450,Cord blood 3,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 4,9968646132,R03C02,9968646132
+GSM2752451,Cord blood 3,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: Control,9968646132,R06C02,9968646132
+GSM2752452,Cord blood 4,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcripts 1+3,200109350006,R01C01,200109350006
+GSM2752453,Cord blood 4,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 2,200109350006,R02C01,200109350006
+GSM2752454,Cord blood 4,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 4,200109350006,R03C01,200109350006
+GSM2752455,Cord blood 4,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: Control,200109350006,R04C01,200109350006
+GSM2752456,Cord blood 5,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcripts 1+3,200109350006,R05C01,200109350006
+GSM2752457,Cord blood 5,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 2,200109350006,R06C01,200109350006
+GSM2752458,Cord blood 5,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 4,200109350006,R01C02,200109350006
+GSM2752459,Cord blood 5,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: Control,200109350006,R02C02,200109350006
+GSM2752460,Cord blood 6,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcripts 1+3,200109350006,R03C02,200109350006
+GSM2752461,Cord blood 6,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 2,200109350006,R04C02,200109350006
+GSM2752462,Cord blood 6,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: DNMT3A transcript 4,200109350006,R05C02,200109350006
+GSM2752463,Cord blood 6,Homo sapiens,cell type: CD34+ HSCs,primary tissue: cord blood,dnmt3a transcript: Control,200109350006,R06C02,200109350006
