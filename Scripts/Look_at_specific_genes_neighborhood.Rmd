@@ -98,7 +98,7 @@ Fusionned_figures <- merge(BMIQ_CD34, BMIQ_IDHm, by.x = 0, by.y = 0)
 rownames(Fusionned_figures) <- Fusionned_figures$Row.names
 Fusionned_figures <- Fusionned_figures[,-1]
 
-debug <- Focus_gene_neighborhood("CEBPA", Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)
+debug_df <- Focus_gene_neighborhood("PPARGC1A", Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)
 
 for (i in gene_list){
   Focus_gene_neighborhood(i, Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)

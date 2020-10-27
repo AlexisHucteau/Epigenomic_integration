@@ -106,7 +106,7 @@ Focus_Gene <- function(gene, DATA_met, Phenotype, matchit) {
   colnames(Beta_value) <- c("Beta_values", "cpg_localisation", "type", "Illumina_position_reference")
   Beta_value$Phenotype <- ifelse(str_detect(rownames(Beta_value), "GSM"), "CD34+", "IDHm")
 
-  ggplot(Beta_value, aes(y=Beta_values, x=Phenotype, fill=cpg_localisation, colour= type))+
+  ggplot(Beta_value, aes(y=Beta_values, x=Phenotype, colour= type))+
     geom_boxplot(alpha=0.25)+
     geom_jitter(width=0.25, alpha=0.25)+
     ggtitle(paste0(gene," Promoter Methylation"))+
