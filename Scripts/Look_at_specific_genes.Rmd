@@ -4,15 +4,13 @@ output: html_notebook
 ---
 
 ```{r}
-library(GenomicRanges)
-library(ggplot2)
-library(tidyr)
-library(stringr)
+source("packages.R")
+source("functions.R")
 
 "%ni%" <- Negate("%in%")
 
-load("~/Thesis/Projects/Epigenomic_integration/DATA/CD34/Methylation/BMIQ_CD34.Rdata")
-load("~/Thesis/Projects/Epigenomic_integration/DATA/IDHm/Methylation/IDHm_BMIQ.Rdata")
+load("../../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
+load("../../DATA/IDHm/Methylation/IDHm_BMIQ.Rdata")
 ```
 
 
@@ -25,102 +23,38 @@ Blueprint <- read.csv("~/Thesis/Projects/Epigenomic_integration/BLUEPRINT_fragme
 
 anno <- read.csv("~/Illumina_manifest/HumanMethylation450_15017482_v1-2.csv", skip = 7) %>% 
   dplyr::select(., "Name", "CHR", "MAPINFO", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_UCSC_CpG_Island") %>%
-  dplyr::filter(., CHR != "")
-```
+  dplyr::filter(., CHR != "") %>%
+  separate_rows(., UCSC_RefGene_Name, UCSC_RefGene_Group, sep = ";")
 
-
-```{r}
-Gene_name_finding <- function(gene){
-  Blueprint_gene_name <- Blueprint$gene_names %>% unique(.)
-  Illumina_gene_name <- anno$UCSC_RefGene_Name %>% strsplit(., ";") %>% unique(.)
-  gene_referenced <- c(Blueprint_gene_name, Illumina_gene_name) %>% 
-    unlist(.) %>% 
-    unique(.) %>%
-    .[str_detect(., gene)]
-  return(gene_referenced)
-}
-```
-
-
-```{r}
-Focus_Gene <- function(gene, DATA_met, Phenotype) {
-  nb_sample <- length(colnames(DATA_met))
-  Blueprint_focused <- dplyr::filter(Blueprint, str_detect(Blueprint$gene_names, gene))
-  anno_focused <- anno %>% separate_rows(., UCSC_RefGene_Name, sep = ";") %>%
-    dplyr::filter(., str_detect(.$UCSC_RefGene_Name, gene))
-  Blueprint_Granges <- GRanges(
-    seqnames = Blueprint_focused$chr,
-    ranges = IRanges(start = Blueprint_focused$start, end = Blueprint_focused$end),
-    Blueprint_gene_names = Blueprint_focused$gene_names,
-    type = Blueprint_focused$type,
-    gene_type = Blueprint_focused$gene_type
+Blueprint_Granges <- GRanges(
+    seqnames = Blueprint$chr,
+    ranges = IRanges(start = Blueprint$start, end = Blueprint$end),
+    Blueprint_gene_names = Blueprint$gene_names,
+    type = Blueprint$type,
+    gene_type = Blueprint$gene_type
   )
-  CpGs_Granges <- GRanges(
-    seqnames = anno$CHR,
-    ranges = IRanges(anno$MAPINFO, anno$MAPINFO +1),
-    CpG = anno$Name,
-    Illumina_Gene_name = anno$UCSC_RefGene_Name,
-    position = anno$UCSC_RefGene_Group,
-    Island = anno$Relation_to_UCSC_CpG_Island
-  )
-  overlaps_CpGs_Blueprint <- findOverlaps(Blueprint_Granges, CpGs_Granges)
-  match_hit_CpGs_Blueprint <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_CpGs_Blueprint),]),
-                                         data.frame(mcols(CpGs_Granges[subjectHits(overlaps_CpGs_Blueprint),])))
-  anno_focused <- anno_focused %>% dplyr::filter(., .$Name %ni% match_hit_CpGs_Blueprint$CpG)
-  df_length <- length(anno_focused$Name)
-  to_add <- data.frame("Blueprint_gene_names" = rep(gene, df_length),
-                       "type" = rep("Illumina_annotation", df_length),
-                       "gene_type" = rep("", df_length),
-                       "CpG" = anno_focused$Name,
-                       "Illumina_Gene_name" = anno_focused$UCSC_RefGene_Name,
-                       "position" = anno_focused$UCSC_RefGene_Group,
-                       "Island" = anno_focused$Relation_to_UCSC_CpG_Island)
-  final_matchit <- rbind(match_hit_CpGs_Blueprint, to_add)
-  Specific_CpGs_value <- merge(final_matchit, DATA_met, by.x = "CpG", by.y = 0, all.x = TRUE) %>%
-    separate_rows(., Illumina_Gene_name, position, sep = ";")
-  Methylation <- dplyr::filter(Specific_CpGs_value, Blueprint_gene_names == gene | Illumina_Gene_name == gene) %>%
-    na.omit(.) %>%
-    unique(.)
-  Beta_value <- data.frame(c(Methylation[,1:nb_sample+7]) %>%
-                             unlist(.) %>%
-                             na.omit(.),
-                           rep(Methylation$Island, nb_sample),
-                           rep(Methylation$type, nb_sample),
-                           rep(Methylation$position, nb_sample)) %>%
-    unique(.)
-  colnames(Beta_value) <- c("Beta_values", "cpg_localisation", "type", "Illumina_position_reference")
-  Beta_value$Phenotype <- ifelse(str_detect(rownames(Beta_value), "GSM"), "CD34+", "IDHm")
+CpGs_Granges <- GRanges(
+  seqnames = anno$CHR,
+  ranges = IRanges(anno$MAPINFO, anno$MAPINFO +1),
+  CpG = anno$Name,
+  Illumina_Gene_name = anno$UCSC_RefGene_Name,
+  position = anno$UCSC_RefGene_Group,
+  Island = anno$Relation_to_UCSC_CpG_Island
+)
+overlaps_CpGs_Blueprint <- findOverlaps(Blueprint_Granges, CpGs_Granges)
+match_hit_CpGs_Blueprint <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_CpGs_Blueprint),]),
+                                       data.frame(mcols(CpGs_Granges[subjectHits(overlaps_CpGs_Blueprint),])))
 
-  ggplot(Beta_value, aes(y=Beta_values, x=Phenotype, fill=cpg_localisation, colour= type))+
-    geom_boxplot(alpha=0.25)+
-    geom_jitter(width=0.25, alpha=0.25)+
-    ggtitle(paste0(gene," Promoter Methylation"))+
-    xlab("Position of CpGs")+
-    ylab("Value of the methylation")+
-  scale_shape_manual(values=c(0,1,2,5,6,7))
 
-  ggsave(
-    filename = paste0("../Results/", gene, "_", Phenotype, "_Promoter_state.png"),
-    plot = last_plot(),
-    device = NULL,
-    path = NULL,
-    scale = 1,
-    width = NA,
-    height = NA,
-    units = c("in", "cm", "mm"),
-    dpi = 300,
-    limitsize = TRUE
-    )
-}
 ```
-
 
 ```{r}
 gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
 
+Focus_Gene("CEBPA", BMIQ_CD34, "CD34+", match_hit_CpGs_Blueprint)
 for (i in gene_list){
-  Focus_Gene(i, BMIQ_CD34, "CD34+")
-  Focus_Gene(i, BMIQ_IDHm, "IDHm")
+  Focus_Gene(i, BMIQ_CD34, "CD34+", match_hit_CpGs_Blueprint)
+  Focus_Gene(i, BMIQ_IDHm, "IDHm", match_hit_CpGs_Blueprint)
 }
 ```
 ```{r}
@@ -129,7 +63,7 @@ rownames(Fusionned_figures) <- Fusionned_figures$Row.names
 Fusionned_figures <- Fusionned_figures[,-1]
 
 for (i in gene_list){
-  Focus_Gene(i, Fusionned_figures, "CD34vsIDHm")
+  Focus_Gene(i, Fusionned_figures, "CD34vsIDHm", match_hit_CpGs_Blueprint)
 }
 ```
 
