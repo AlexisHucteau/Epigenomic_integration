@@ -9,19 +9,19 @@ source("functions.R")
 
 "%ni%" <- Negate("%in%")
 
-load("../../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
-load("../../DATA/IDHm/Methylation/IDHm_BMIQ.Rdata")
+load("../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
+load("../DATA/IDHm/Methylation/BMIQ_IDHm.RData")
 ```
 
 
 ```{r}
-Blueprint <- read.csv("~/Thesis/Projects/Epigenomic_integration/BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
+Blueprint <- read.csv("../BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
   dplyr::select(., "gene_names":"type", "gene_type") %>%
   separate_rows(., gene_names, sep = " ") %>%
   separate_rows(., gene_type, sep = " ") %>%
   unique(.)
 
-anno <- read.csv("~/Illumina_manifest/HumanMethylation450_15017482_v1-2.csv", skip = 7) %>% 
+anno <- read.csv("~/Illumina_Manifest/HumanMethylation450_15017482_v1-2.csv", skip = 7) %>% 
   dplyr::select(., "Name", "CHR", "MAPINFO", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_UCSC_CpG_Island") %>%
   dplyr::filter(., CHR != "") %>%
   separate_rows(., UCSC_RefGene_Name, UCSC_RefGene_Group, sep = ";")
@@ -51,7 +51,6 @@ match_hit_CpGs_Blueprint <- data.frame(mcols(Blueprint_Granges[queryHits(overlap
 ```{r}
 gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
 
-Focus_Gene("CEBPA", BMIQ_CD34, "CD34+", match_hit_CpGs_Blueprint)
 for (i in gene_list){
   Focus_Gene(i, BMIQ_CD34, "CD34+", match_hit_CpGs_Blueprint)
   Focus_Gene(i, BMIQ_IDHm, "IDHm", match_hit_CpGs_Blueprint)
@@ -63,7 +62,32 @@ rownames(Fusionned_figures) <- Fusionned_figures$Row.names
 Fusionned_figures <- Fusionned_figures[,-1]
 
 for (i in gene_list){
-  Focus_Gene(i, Fusionned_figures, "CD34vsIDHm", match_hit_CpGs_Blueprint)
+  Focus_Gene(i, filtered_DMP[,c(-1,-2)], "CD34vsIDHm_differencial_methylation", match_hit_CpGs_Blueprint, show_cpgs = TRUE)
 }
+Focus_Gene("", Fusionned_figures, "CD34vsIDHm", match_hit_CpGs_Blueprint)
+```
+
+```{r}
+TS <- ifelse(str_detect(colnames(Fusionned_figures), "GSM"), "CD34", "IDHm")
+TS <- factor(TS, levels = c("CD34", "IDHm"))
+design <- model.matrix(~ 0 + TS)
+colnames(design) <- levels(TS)
+fit <- lmFit(Fusionned_figures, design)
+
+cont.matrix <- makeContrasts(
+  IDHm_vs_CD34 = CD34 - IDHm,
+  levels = design
+)
+fit.contrast <- contrasts.fit(fit, cont.matrix)
+efit.contrast <- eBayes(fit.contrast)
+
+filtered_DMP <- data.frame(logFC = efit.contrast[["coefficients"]][,1], pvalue = efit.contrast[["p.value"]][,1]) %>%
+  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
+  dplyr::filter(., pvalue < 0.01) %>%
+  merge(., Fusionned_figures, by.x = 0, by.y = 0)
+rownames(filtered_DMP) <- filtered_DMP$Row.names
+filtered_DMP <- filtered_DMP[,-1]
+
+Focus_CpGs(filtered_DMP, match_hit_CpGs_Blueprint)
 ```
 

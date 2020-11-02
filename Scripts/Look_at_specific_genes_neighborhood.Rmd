@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 ```{r}
-setwd("~/Thesis/Projects/Epigenomic_integration/")
+setwd("~/GitHub/Epigenomic_integration/")
 WD <- getwd()
 source("Scripts/packages.R")
 source("Scripts/functions.R")
@@ -50,7 +50,7 @@ match_hit_pchic_AML_enhancer <- data.frame(mcols(PCHiC_GRange[queryHits(overlaps
                                        data.frame(mcols(AML_enhancer_Granges[subjectHits(overlaps_pchic_AML_enhancer),])))
 
 
-Blueprint <- read.csv("~/Thesis/Projects/Epigenomic_integration/BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
+Blueprint <- read.csv("../BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
   dplyr::select(., "gene_names":"type", "gene_type") %>%
   separate_rows(., gene_names, sep = " ") %>%
   separate_rows(., gene_type, sep = " ") %>%
@@ -93,15 +93,42 @@ matchit_CpGs_Pchic$AML_enhancer <- ifelse(matchit_CpGs_Pchic$ID %in% match_hit_p
 ```{r}
 gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
 
-
 Fusionned_figures <- merge(BMIQ_CD34, BMIQ_IDHm, by.x = 0, by.y = 0)
 rownames(Fusionned_figures) <- Fusionned_figures$Row.names
 Fusionned_figures <- Fusionned_figures[,-1]
 
-debug_df <- Focus_gene_neighborhood("PPARGC1A", Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)
+Focus_gene_neighborhood("TTC9C", Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)
 
 for (i in gene_list){
   Focus_gene_neighborhood(i, Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)
 }
 ```
+```{r}
+TS <- ifelse(str_detect(colnames(Fusionned_figures), "GSM"), "CD34", "IDHm")
+TS <- factor(TS, levels = c("CD34", "IDHm"))
+design <- model.matrix(~ 0 + TS)
+colnames(design) <- levels(TS)
+fit <- lmFit(Fusionned_figures, design)
+
+cont.matrix <- makeContrasts(
+  IDHm_vs_CD34 = CD34 - IDHm,
+  levels = design
+)
+fit.contrast <- contrasts.fit(fit, cont.matrix)
+efit.contrast <- eBayes(fit.contrast)
+
+filtered_DMP <- data.frame(logFC = efit.contrast[["coefficients"]][,1], pvalue = efit.contrast[["p.value"]][,1]) %>%
+  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
+  dplyr::filter(., pvalue < 0.01) %>%
+  merge(., Fusionned_figures, by.x = 0, by.y = 0)
+rownames(filtered_DMP) <- filtered_DMP$Row.names
+filtered_DMP <- filtered_DMP[,-1]
+
+for (i in gene_list){
+  Focus_gene_neighborhood_cpgs_DMP(i, Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic, filtered_DMP)
+}
+
+
+```
+
 
