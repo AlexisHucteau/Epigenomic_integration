@@ -98,10 +98,8 @@ BMIQ_all <- BMIQ_all[,-1]
 Phenotype <- data.frame("Sample" = colnames(BMIQ_all),"Phenotype" = ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_IDHm), "IDHm", 
                     ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_CD34), "CD34", "IDHWT")))
 
-debugg <- Focus_gene_neighborhood("CEBPA", BMIQ_all, matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic, Phenotype_df = Phenotype, title = "Neighbor_Promoter_methylation_IDHWT_CD34_IDHWT")
-
 for (i in gene_list){
-  Focus_gene_neighborhood(i, BMIQ_all, matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic, Phenotype_df = Phenotype, title = "Neighbor_Promoter_methylation_IDHWT_CD34_IDHWT")
+  Focus_gene_neighborhood(i, BMIQ_all, matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic, Phenotype_df = Phenotype, title = "Neighbor_Promoter_methylation_IDHWT_CD34_IDHWT", comparison = c("IDHm","IDHWT"), show_cpgs = TRUE)
 }
 ```
 
@@ -143,13 +141,13 @@ rownames(filtered_DMPIDHWT_vs_CD34) <- filtered_DMPIDHWT_vs_CD34$Row.names
 filtered_DMPIDHWT_vs_CD34 <- filtered_DMPIDHWT_vs_CD34[,-1]
 
 for (i in gene_list){
-  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHmvsCD34_differential_methylation", Phenotype, filtered_DMP_IDHmvsCD34, diff = TRUE)
+  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHmvsCD34_differential_methylation", Phenotype, filtered_DMP_IDHmvsCD34, diff = TRUE, show_cpgs = TRUE, comparison = c("IDHm","CD34"))
 }
 for (i in gene_list){
-  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHmvsIDHWT_differential_methylation", Phenotype, filtered_DMPIDHmvsIDHWT, diff = TRUE)
+  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHmvsIDHWT_differential_methylation", Phenotype, filtered_DMPIDHmvsIDHWT, diff = TRUE, show_cpgs = TRUE, comparison = c("IDHm","IDHWT"))
 }
 for (i in gene_list){
-  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHWT_vs_CD34_differential_methylation", Phenotype, filtered_DMPIDHWT_vs_CD34, diff = TRUE)
+  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHWT_vs_CD34_differential_methylation", Phenotype, filtered_DMPIDHWT_vs_CD34, diff = TRUE, show_cpgs = TRUE, comparison = c("IDHWT","CD34"))
 }
 
 

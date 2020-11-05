@@ -92,37 +92,62 @@ Gene_name_finding <- function(gene){
 ```
 
 ```{r}
-Focus_Gene <- function(gene, DATA_met, matchit, show_cpgs, Phenotype_df, title, diff = FALSE) {
+Focus_Gene <- function(gene, DATA_met, matchit, show_cpgs, Phenotype_df, title, diff = FALSE, comparison) {
   diff <- ifelse(diff, 2, 0)
   cpgs <- ifelse(show_cpgs, 0.25, 0)
   nb_sample <- length(colnames(DATA_met)) - diff
-  match_hit_CpGs_Blueprint_focused <- matchit %>%
-    dplyr::filter(., .$Blueprint_gene_names == gene)
-  Specific_CpGs_value <- merge(match_hit_CpGs_Blueprint_focused, DATA_met, by.x = "CpG", by.y = 0, all.x = TRUE) 
+  match_hit_CpGs_Blueprint_focused <- match_hit_CpGs_Blueprint %>%
+    dplyr::filter(., .$Blueprint_gene_names == gene & .$type == "P")
+  anno_focused <- anno %>% 
+    dplyr::filter(., .$UCSC_RefGene_Name == gene) %>%
+    dplyr::filter(., .$Name %ni% match_hit_CpGs_Blueprint_focused$CpG)
+  df_length <- length(anno_focused$Name)
+  to_add <- data.frame("Blueprint_gene_names" = rep(gene, df_length),
+                     "type" = rep("In promoter (Illumina annotation)", df_length),
+                     "gene_type" = rep("", df_length),
+                     "CpG" = anno_focused$Name,
+                     "Illumina_Gene_name" = anno_focused$UCSC_RefGene_Name,
+                     "position" = anno_focused$UCSC_RefGene_Group,
+                     "Island" = anno_focused$Relation_to_UCSC_CpG_Island)
+  ifelse(length(match_hit_CpGs_Blueprint_focused$CpG) == 0, 
+         final_matchit <- rbind(match_hit_CpGs_Blueprint_focused, to_add),
+         final_matchit <- match_hit_CpGs_Blueprint_focused)
+  Specific_CpGs_value <- merge(final_matchit, DATA_met, by.x = "CpG", by.y = 0) 
   Methylation <- dplyr::filter(Specific_CpGs_value, Blueprint_gene_names == gene | Illumina_Gene_name == gene) %>%
     na.omit(.) %>%
     unique(.)
-  Aggregated_CpGs <- data.frame("Beta_values" = colMeans2(as.matrix(Methylation[,1:nb_sample+7+diff])), "Phenotype" = Phenotype_df$Phenotype)
-  Beta_value <- data.frame(c(Methylation[,1:nb_sample+7+diff]) %>%
+  nb_cpgs <- length(Methylation$CpG)
+  if(nb_cpgs == 0 ){
+    print(paste0("No chromatin fragment found in promoter of ", gene))
+    return()
+  }
+  Aggregated_CpGs <- data.frame("Beta_values" = Methylation[,1:nb_sample+7+diff] %>%
+                                  as.matrix(.) %>%
+                                  colMedians(.), 
+                                "Phenotype" = Phenotype_df$Phenotype, 
+                                "CpG_position" = rep("", length(Phenotype_df$Phenotype)))
+  Beta_value <- data.frame("Beta_values" = c(Methylation[,1:nb_sample+7+diff]) %>%
                              unlist(.) %>%
                              na.omit(.),
-                           rep(Phenotype_df$Phenotype, each = length(rownames(Methylation))),
-                           rep(Methylation$Island, nb_sample),
-                           rep(Methylation$type, nb_sample) %>% ifelse(. == "P", "In promoter (Blueprint annotation)", .),
-                           rep(Methylation$position, nb_sample)) %>%
+                           "Phenotype" = rep(Phenotype_df$Phenotype, each = length(rownames(Methylation))),
+                           "cpg_localisation" = rep(Methylation$Island, nb_sample),
+                           "CpG_position" = rep(Methylation$type, nb_sample) %>% ifelse(. == "P", "In promoter (Blueprint annotation)", .),
+                           "Illumina_position_reference" = rep(Methylation$position, nb_sample)) %>%
     unique(.)
-  colnames(Beta_value) <- c("Beta_values", "Phenotype", "cpg_localisation", "CpG_position", "Illumina_position_reference")
+  text_cpg <- ifelse(diff, paste0("Number of cpgs\n differentially methylated\n in the promoter of \n", gene, ": \n", nb_cpgs), paste0("Number of cpgs in \nthe promoter\n of ", gene, ": ", nb_cpgs))
   ggplot(Beta_value, aes(y=Beta_values, x=Phenotype, fill = CpG_position))+
     geom_boxplot(alpha=0.25)+
-    geom_jitter(width=cpgs, alpha=cpgs)+
+    geom_jitter(Aggregated_CpGs, mapping = aes(y = Beta_values, x = Phenotype), width=0.25, alpha=0.25)+
+    coord_cartesian(xlim = c(1,3), clip = "off")+
+    annotate("text", x = 4.5, y = 0.85, label = text_cpg) +
     ggtitle(paste0(gene, " ", title))+
     xlab("Position of CpGs")+
     ylab("Value of the methylation")+
     scale_shape_manual(values=c(0,1,2,5,6,7))+
-    geom_signif(comparisons = list(c("IDHWT", "IDHm")), map_signif_level=TRUE)
-
+    geom_signif(comparisons = list(comparison), map_signif_level=TRUE)
+  directory <- ifelse(diff, "Differential_methylation/", "Global_methylation/")
   ggsave(
-    filename = paste0("../Results/Specific_gene_focus/", gene, "_", title, ".png"),
+    filename = paste0("../Results/Specific_gene_focus/", directory, gene, "_", title, ".png"),
     plot = last_plot(),
     device = NULL,
     path = NULL,
@@ -133,35 +158,45 @@ Focus_Gene <- function(gene, DATA_met, matchit, show_cpgs, Phenotype_df, title, 
     dpi = 300,
     limitsize = TRUE
   )
-
 }
 
 ```
 
 ```{r}
-Focus_global_methylation <- function(DATA_met, matchit, show_cpgs = FALSE, Phenotype_df, title, diff = FALSE) {
+Focus_global_methylation <- function(DATA_met, matchit, show_cpgs = FALSE, Phenotype_df, title, diff = FALSE, comparison, promoter = FALSE) {
   diff <- ifelse(diff, 2, 0)
   cpgs <- ifelse(show_cpgs, 0.25, 0)
   nb_sample <- length(colnames(DATA_met)) - diff
   Specific_CpGs_value <- merge(matchit, DATA_met, by.x = "CpG", by.y = 0) %>%
     na.omit(.)
-  Beta_value <- data.frame(c(Specific_CpGs_value[,1:nb_sample+7+diff]) %>%
-                             unlist(.),
-                           rep(Phenotype_df$Phenotype, each = length(rownames(Specific_CpGs_value))),
-                           rep(Specific_CpGs_value$Island, nb_sample),
-                           rep(Specific_CpGs_value$type, nb_sample),
-                           rep(Specific_CpGs_value$position, nb_sample)) %>%
+  if(promoter){
+    Specific_CpGs_value <- dplyr::filter(Specific_CpGs_value, type == "P")
+  }
+  nb_cpgs <- length(Specific_CpGs_value$CpG)
+  Aggregated_CpGs <- data.frame("Beta_values" = Specific_CpGs_value[,1:nb_sample+7+diff] %>%
+                                  as.matrix(.) %>%
+                                  colMedians(.), 
+                                "Phenotype" = Phenotype_df$Phenotype, 
+                                "CpG_position" = rep("", length(Phenotype_df$Phenotype)))
+  Beta_value <- data.frame("Beta_values" = c(Specific_CpGs_value[,1:nb_sample+7+diff]) %>%
+                             unlist(.) %>%
+                             na.omit(.),
+                           "Phenotype" = rep(Phenotype_df$Phenotype, each = length(rownames(Specific_CpGs_value))),
+                           "cpg_localisation" = rep(Specific_CpGs_value$Island, nb_sample),
+                           "CpG_position" = rep(Specific_CpGs_value$type, nb_sample) %>% ifelse(. == "P", "In promoter (Blueprint annotation)", .),
+                           "Illumina_position_reference" = rep(Specific_CpGs_value$position, nb_sample)) %>%
     unique(.)
-  colnames(Beta_value) <- c("Beta_values", "Phenotype", "cpg_localisation", "type", "Illumina_position_reference")
-  ggplot(Beta_value, aes(y=Beta_values, x=Phenotype, colour= cpg_localisation, fill = type))+
+  text_cpg <- ifelse(diff, paste0("Number of cpgs\n differentially \nmethylated : ", nb_cpgs), paste0("Number of \ncpgs : ", nb_cpgs))
+  ggplot(Beta_value, aes(y=Beta_values, x=Phenotype, fill = CpG_position))+
     geom_boxplot(alpha=0.25)+
-    geom_jitter(width=cpgs, alpha=cpgs)+
+    geom_jitter(Aggregated_CpGs, mapping = aes(y = Beta_values, x = Phenotype), width=cpgs, alpha=cpgs)+
+    coord_cartesian(xlim = c(1,3), clip = "off")+
+    annotate("text", x = 4.5, y = 0.8, label = text_cpg) +
     ggtitle(title)+
     xlab("Position of CpGs")+
     ylab("Value of the methylation")+
     scale_shape_manual(values=c(0,1,2,5,6,7))+
-    geom_signif(comparisons = list(c("CD34+", "IDHm")), map_signif_level=TRUE)
-
+    geom_signif(comparisons = list(comparison), map_signif_level=TRUE)
   ggsave(
     filename = paste0("../Results/", title, ".png"),
     plot = last_plot(),
@@ -178,10 +213,11 @@ Focus_global_methylation <- function(DATA_met, matchit, show_cpgs = FALSE, Pheno
 ```
 
 ```{r}
-Focus_gene_neighborhood <- function(gene, DATA_met, matchit_blueprint, matchit_pchic, title, Phenotype_df, focused_cpgs, diff = FALSE){
+Focus_gene_neighborhood <- function(gene, DATA_met, matchit_blueprint, matchit_pchic, title, Phenotype_df, focused_cpgs, diff = FALSE, show_cpgs = FALSE, comparison){
   nb_sample <- length(colnames(DATA_met))
+  cpgs <- ifelse(show_cpgs, 0.25, 0)
   match_hit_CpGs_Blueprint_focused <- matchit_blueprint %>%
-    dplyr::filter(., Blueprint_gene_names == gene | Illumina_Gene_name == gene)
+    dplyr::filter(., Blueprint_gene_names == gene)
   anno_focused <- anno %>%
     dplyr::filter(., UCSC_RefGene_Name == gene) %>%
     dplyr::filter(., Name %ni% match_hit_CpGs_Blueprint_focused$CpG)
@@ -193,13 +229,19 @@ Focus_gene_neighborhood <- function(gene, DATA_met, matchit_blueprint, matchit_p
                        "Illumina_Gene_name" = anno_focused$UCSC_RefGene_Name,
                        "position" = anno_focused$UCSC_RefGene_Group,
                        "Island" = anno_focused$Relation_to_UCSC_CpG_Island)
-  final_matchit <- rbind(match_hit_CpGs_Blueprint_focused, to_add)
+  ifelse(length(match_hit_CpGs_Blueprint_focused$CpG) == 0, 
+         final_matchit <- rbind(match_hit_CpGs_Blueprint_focused, to_add),
+         final_matchit <- match_hit_CpGs_Blueprint_focused)  
   CpGs_value <- merge(final_matchit, DATA_met, by.x = "CpG", by.y = 0, all.x = TRUE)
   Specific_CpGs_value <- CpGs_value %>%
     dplyr::filter(., type == "P" | position == "TSS1500" | position == "TSS200") %>%
     na.omit(.)
   focused_gene_fragment <- matchit_pchic %>%
     dplyr::filter(., CpG %in% Specific_CpGs_value$CpG)
+  if(length(focused_gene_fragment[,1]) == 0){
+    print(paste0("No chromatin fragment found in promoter of ", gene))
+    return()
+  }
   neighborhood <- pchic %>%
     dplyr::filter(., IDbait %in% focused_gene_fragment$ID | IDoe %in% focused_gene_fragment$ID) %>%
     .[,c(1:3,11, 5:8,12, 10)]
@@ -214,30 +256,40 @@ Focus_gene_neighborhood <- function(gene, DATA_met, matchit_blueprint, matchit_p
   if (diff){
     Network_nodes <- dplyr::filter(Network_nodes, CpG %in% rownames(focused_cpgs))
   }
-  Beta_value_network <- data.frame(c(Network_nodes[,1:nb_sample+8]) %>% 
+  Network_nodes <- Network_nodes %>%
+    dplyr::select(., c("CpG", "CD34_enhancer", colnames(.)[1:nb_sample+8])) %>%
+    unique(.)
+  if(length(Network_nodes[,1]) == 0){
+    print(paste0("No chromatin fragment found in the neighborhood of the promoter of ", gene))
+    return()
+  }
+  nb_cpgs <- length(Network_nodes$CpG)
+  text_cpg <- ifelse(diff, paste0("Number of cpgs\n differentially methylated\n in the neighborhood of \n", gene, ": \n", nb_cpgs), paste0("Number of cpgs in \nthe neighborhood\n of ", gene, ": ", nb_cpgs))
+  Aggregated_CpGs <- data.frame("Beta_values" = Network_nodes[,1:nb_sample+2] %>%
+                                  as.matrix(.) %>%
+                                  na.omit(.) %>%
+                                  colMedians(.), 
+                                "Phenotype" = Phenotype_df$Phenotype, 
+                                "enhancer" = rep("", length(Phenotype_df$Phenotype)))
+  Beta_value_network <- data.frame("Beta_values" = c(Network_nodes[,1:nb_sample+2]) %>% 
                                      unlist(.) %>% 
                                      na.omit(.),
-                           rep(Phenotype_df$Phenotype, each = length(rownames(Network_nodes))),
-                           rep(Network_nodes$Island, nb_sample),
-                           rep(Network_nodes$type, nb_sample),
-                           rep(Network_nodes$position, nb_sample),
-                           rep(Network_nodes$CD34_enhancer, nb_sample)) %>%
+                           "Phenotype" = rep(Phenotype_df$Phenotype, each = length(rownames(Network_nodes))),
+                           "enhancer" = rep(Network_nodes$CD34_enhancer, nb_sample)) %>%
     unique(.)
-  
-  colnames(Beta_value_network) <- c("Beta_values", "Phenotype", "cpg_localisation", "type", "Illumina_position_reference", "CD34_enhancer")
-  Beta_value_network$enhancer <- Beta_value_network$CD34_enhancer
-
-  ggplot(Beta_value_network, aes(y=Beta_values, x=Phenotype, colour = enhancer, fill = cpg_localisation))+
+  ggplot(Beta_value_network, aes(y=Beta_values, x=Phenotype, fill = enhancer))+
     geom_boxplot(alpha=0.25)+
-    geom_jitter(width=0.25, alpha=0.25)+
+    geom_jitter(Aggregated_CpGs, mapping = aes(y = Beta_values, x = Phenotype), width=cpgs, alpha=cpgs)+
+    coord_cartesian(xlim = c(1,3), clip = "off")+
+    annotate("text", x = 4, y = 0.8, label = text_cpg) +
     ggtitle(paste0(gene, " ", title))+
     xlab("Position of CpGs")+
     ylab("Value of the methylation")+
     scale_shape_manual(values=c(0,1,2,5,6,7))+
-    geom_signif(comparisons = list(c("CD34+", "IDHm")), map_signif_level=TRUE)
-
+    geom_signif(comparisons = list(comparison), map_signif_level=TRUE)
+  directory <- ifelse(diff, "Differential_methylation/", "Global_methylation/")
   ggsave(
-    filename = paste0("../Results/Neighbor_methylation/Differential_methylation/", gene, "_", title, ".png"),
+    filename = paste0("../Results/Neighbor_methylation/", directory, gene, "_", title, ".png"),
     plot = last_plot(),
     device = NULL,
     path = NULL,
@@ -249,21 +301,51 @@ Focus_gene_neighborhood <- function(gene, DATA_met, matchit_blueprint, matchit_p
     limitsize = TRUE
   )
 }  
+  
 
 ```
 
+```{r}
+Global_methylation <- function(DATA_met, matchit, show_cpgs = FALSE, Phenotype_df, title, diff = FALSE, comparison){
+  cpgs <- ifelse(show_cpgs, 0.25, 0)
+  nb_sample <- length(colnames(DATA_met))
+  Specific_CpGs_value <- merge(matchit, DATA_met, by.x = "CpG", by.y = 0) %>%
+    dplyr::filter(., type == "P") %>%
+    na.omit(.)
+  nb_cpgs <- length(Specific_CpGs_value$CpG)
+  Aggregated_CpGs <- data.frame("Beta_values" = Specific_CpGs_value[,1:nb_sample+7] %>%
+                                  as.matrix(.) %>%
+                                  colMeans2(.), 
+                                "Phenotype" = Phenotype_df$Phenotype, 
+                                "CpG_position" = rep("", length(Phenotype_df$Phenotype)))
+  text_cpg <- paste0("Number of \ncpgs : ", nb_cpgs)
+  
+  ggplot(Aggregated_CpGs, aes(y=Beta_values, x=Phenotype))+
+    geom_boxplot(alpha=0.25)+
+    geom_jitter(width=cpgs, alpha=cpgs)+
+    coord_cartesian(xlim = c(1,3), ylim = c(0,1), clip = "off")+
+    annotate("text", x = 4.5, y = 0.8, label = text_cpg) +
+    ggtitle(title)+
+    xlab("Position of CpGs")+
+    ylab("Value of the methylation")+
+    scale_shape_manual(values=c(0,1,2,5,6,7))+
+    geom_signif(comparisons = list(comparison), map_signif_level=TRUE)
+  ggsave(
+    filename = paste0("../Results/", title, ".png"),
+    plot = last_plot(),
+    device = NULL,
+    path = NULL,
+    scale = 1,
+    width = NA,
+    height = NA,
+    units = c("in", "cm", "mm"),
+    dpi = 300,
+    limitsize = TRUE
+  )
+}
+```
 
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   
   
   
