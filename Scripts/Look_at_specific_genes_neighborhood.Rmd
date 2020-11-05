@@ -5,9 +5,8 @@ output: html_notebook
 
 ```{r}
 setwd("~/GitHub/Epigenomic_integration/")
-WD <- getwd()
 source("Scripts/packages.R")
-source("Scripts/functions.R")
+#source("Scripts/functions.R")
 ```
 
 
@@ -84,49 +83,75 @@ overlaps_CpGs_Pchic <- findOverlaps(CpGs_Granges, PCHiC_GRange)
 matchit_CpGs_Pchic <- data.frame(mcols(CpGs_Granges[queryHits(overlaps_CpGs_Pchic),]),
                                        data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_CpGs_Pchic),])))
 matchit_CpGs_Pchic$CD34_enhancer <- ifelse(matchit_CpGs_Pchic$ID %in% match_hit_pchic_CD34_enhancer$ID, "CD34_enhancer", "not_referenced")
-matchit_CpGs_Pchic$AML_enhancer <- ifelse(matchit_CpGs_Pchic$ID %in% match_hit_pchic_AML_enhancer$ID, "AML_enhancer", "not_referenced")
-
-
 
 ```
 
 ```{r}
 gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
 
-Fusionned_figures <- merge(BMIQ_CD34, BMIQ_IDHm, by.x = 0, by.y = 0)
-rownames(Fusionned_figures) <- Fusionned_figures$Row.names
-Fusionned_figures <- Fusionned_figures[,-1]
+BMIQ_met <- read.csv("~/GitHub/TCGA_Connections/BMIQ_met.csv", row.names=1)
 
-Focus_gene_neighborhood("TTC9C", Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)
+BMIQ_all <- merge(BMIQ_met, BMIQ_CD34, by.x = 0, by.y = 0)
+rownames(BMIQ_all) <- BMIQ_all$Row.names
+BMIQ_all <- BMIQ_all[,-1]
+
+Phenotype <- data.frame("Sample" = colnames(BMIQ_all),"Phenotype" = ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_IDHm), "IDHm", 
+                    ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_CD34), "CD34", "IDHWT")))
+
+debugg <- Focus_gene_neighborhood("CEBPA", BMIQ_all, matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic, Phenotype_df = Phenotype, title = "Neighbor_Promoter_methylation_IDHWT_CD34_IDHWT")
 
 for (i in gene_list){
-  Focus_gene_neighborhood(i, Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic)
+  Focus_gene_neighborhood(i, BMIQ_all, matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic, Phenotype_df = Phenotype, title = "Neighbor_Promoter_methylation_IDHWT_CD34_IDHWT")
 }
 ```
+
 ```{r}
-TS <- ifelse(str_detect(colnames(Fusionned_figures), "GSM"), "CD34", "IDHm")
-TS <- factor(TS, levels = c("CD34", "IDHm"))
+TS <- Phenotype$Phenotype
+TS <- factor(TS, levels = c("CD34", "IDHm", "IDHWT"))
 design <- model.matrix(~ 0 + TS)
 colnames(design) <- levels(TS)
-fit <- lmFit(Fusionned_figures, design)
+fit <- lmFit(BMIQ_all, design)
 
 cont.matrix <- makeContrasts(
   IDHm_vs_CD34 = CD34 - IDHm,
+  IDHm_vs_IDHWT = IDHm - IDHWT,
+  IDHWT_vs_CD34 = IDHWT - CD34,
   levels = design
 )
 fit.contrast <- contrasts.fit(fit, cont.matrix)
 efit.contrast <- eBayes(fit.contrast)
 
-filtered_DMP <- data.frame(logFC = efit.contrast[["coefficients"]][,1], pvalue = efit.contrast[["p.value"]][,1]) %>%
+filtered_DMP_IDHmvsCD34 <- data.frame(logFC = efit.contrast[["coefficients"]][,1], pvalue = efit.contrast[["p.value"]][,1]) %>%
   dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
   dplyr::filter(., pvalue < 0.01) %>%
-  merge(., Fusionned_figures, by.x = 0, by.y = 0)
-rownames(filtered_DMP) <- filtered_DMP$Row.names
-filtered_DMP <- filtered_DMP[,-1]
+  merge(., BMIQ_all, by.x = 0, by.y = 0)
+rownames(filtered_DMP_IDHmvsCD34) <- filtered_DMP_IDHmvsCD34$Row.names
+filtered_DMP_IDHmvsCD34 <- filtered_DMP_IDHmvsCD34[,-1]
+
+filtered_DMPIDHmvsIDHWT <- data.frame(logFC = efit.contrast[["coefficients"]][,2], pvalue = efit.contrast[["p.value"]][,2]) %>%
+  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
+  dplyr::filter(., pvalue < 0.01) %>%
+  merge(., BMIQ_all, by.x = 0, by.y = 0)
+rownames(filtered_DMPIDHmvsIDHWT) <- filtered_DMPIDHmvsIDHWT$Row.names
+filtered_DMPIDHmvsIDHWT <- filtered_DMPIDHmvsIDHWT[,-1]
+
+filtered_DMPIDHWT_vs_CD34 <- data.frame(logFC = efit.contrast[["coefficients"]][,3], pvalue = efit.contrast[["p.value"]][,3]) %>%
+  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
+  dplyr::filter(., pvalue < 0.01) %>%
+  merge(., BMIQ_all, by.x = 0, by.y = 0)
+rownames(filtered_DMPIDHWT_vs_CD34) <- filtered_DMPIDHWT_vs_CD34$Row.names
+filtered_DMPIDHWT_vs_CD34 <- filtered_DMPIDHWT_vs_CD34[,-1]
 
 for (i in gene_list){
-  Focus_gene_neighborhood_cpgs_DMP(i, Fusionned_figures, "CD34vsIDHm", matchit_blueprint = match_hit_CpGs_Blueprint, matchit_pchic = matchit_CpGs_Pchic, filtered_DMP)
+  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHmvsCD34_differential_methylation", Phenotype, filtered_DMP_IDHmvsCD34, diff = TRUE)
 }
+for (i in gene_list){
+  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHmvsIDHWT_differential_methylation", Phenotype, filtered_DMPIDHmvsIDHWT, diff = TRUE)
+}
+for (i in gene_list){
+  Focus_gene_neighborhood(i, BMIQ_all, match_hit_CpGs_Blueprint, matchit_CpGs_Pchic, "Promoter_neighborhood_IDHWT_vs_CD34_differential_methylation", Phenotype, filtered_DMPIDHWT_vs_CD34, diff = TRUE)
+}
+
 
 
 ```
