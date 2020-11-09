@@ -11,6 +11,7 @@ source("packages.R")
 
 load("../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
 load("../DATA/IDHm/Methylation/BMIQ_IDHm.RData")
+load("../DATA/BMIQ_all.RData")
 ```
 
 
@@ -50,17 +51,53 @@ match_hit_CpGs_Blueprint <- data.frame(mcols(Blueprint_Granges[queryHits(overlap
 ```{r}
 gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
 
-BMIQ_met <- read.csv("~/GitHub/TCGA_Connections/BMIQ_met.csv", row.names=1)
+BMIQ_met <- dplyr::select(BMIQ_all, colnames(BMIQ_all)[str_detect(colnames(BMIQ_all), "TCGA")])
 
-BMIQ_all <- merge(BMIQ_met, BMIQ_CD34, by.x = 0, by.y = 0)
+Phenotype_TCGA <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
+  dplyr::filter(., DNMT3A == "DNMT3AWT" & TET2 == "TET2WT" & WT1 == "WT1WT" & FLT3 == "FLT3AWT")
+Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".") %>% str_replace(., "-", ".")
+
+BMIQ_met <- dplyr::select(BMIQ_met, Phenotype_TCGA$X)
+
+BMIQ_all <- merge(BMIQ_met, BMIQ_CD34, by = 0)
 rownames(BMIQ_all) <- BMIQ_all$Row.names
 BMIQ_all <- BMIQ_all[,-1]
 
-Phenotype <- data.frame("Sample" = colnames(BMIQ_all),"Phenotype" = ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_IDHm), "IDHm", 
-                    ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_CD34), "CD34", "IDHWT")))
+Phenotype <- data.frame("Sample" = colnames(BMIQ_all),
+                        "Phenotype" = ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_IDHm), 
+                                             "IDHm", ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_CD34), 
+                                                            "CD34", 
+                                                            "IDHWT")))
 
+Phenotype_no_CD34 <- data.frame("Sample" = colnames(BMIQ_met),
+                                "Phenotype" = ifelse(colnames(BMIQ_met) %in% colnames(BMIQ_IDHm), 
+                                                     "IDHm", 
+                                                     "IDHWT"))
+```
+
+
+```{r}
 for (i in gene_list){
-  Focus_Gene(i, BMIQ_all, match_hit_CpGs_Blueprint, show_cpgs = FALSE, Phenotype, title = "Promoter_methylation_IDHWT_CD34_IDHWT", diff = FALSE, comparison = c("IDHm", "IDHWT"))
+  Focus_Gene(i, 
+             BMIQ_met, 
+             match_hit_CpGs_Blueprint, 
+             show_cpgs = TRUE, 
+             Phenotype_no_CD34, 
+             diff = FALSE, 
+             comparison = c("IDHm", "IDHWT"))
+}
+```
+
+
+```{r}
+for (i in gene_list){
+  Focus_Gene(i, 
+             BMIQ_all, 
+             match_hit_CpGs_Blueprint, 
+             show_cpgs = FALSE, 
+             Phenotype, 
+             diff = FALSE, 
+             comparison = c("IDHm", "IDHWT"))
 }
 ```
 
@@ -100,38 +137,177 @@ filtered_DMP_IDHWT_vs_CD34 <- data.frame(logFC = efit.contrast[["coefficients"]]
   merge(., BMIQ_all, by.x = 0, by.y = 0)
 rownames(filtered_DMP_IDHWT_vs_CD34) <- filtered_DMP_IDHWT_vs_CD34$Row.names
 filtered_DMP_IDHWT_vs_CD34 <- filtered_DMP_IDHWT_vs_CD34[,-1]
-
-Focus_global_methylation(filtered_DMP_IDHmvsCD34, match_hit_CpGs_Blueprint, Phenotype_df = Phenotype, title = "IDHmvsCD34 Global differential Promoter methylation", diff = TRUE, show_cpgs = TRUE, comparison = c("IDHm","CD34"), promoter = TRUE)
-
-Focus_global_methylation(filtered_DMP_IDHmvsIDHWT, match_hit_CpGs_Blueprint, Phenotype_df = Phenotype, title = "IDHmvsIDHWT Global differential Promoter methylation", diff = TRUE, show_cpgs = TRUE, comparison = c("IDHm","IDHWT"), promoter = TRUE)
-
-Focus_global_methylation(filtered_DMP_IDHWT_vs_CD34, match_hit_CpGs_Blueprint, Phenotype_df = Phenotype, title = "IDHWT_vs_CD34 Global differential Promoter methylation", diff = TRUE, show_cpgs = TRUE, comparison = c("IDHWT","CD34"), promoter = TRUE)
-
-Focus_global_methylation(filtered_DMP_IDHmvsCD34, match_hit_CpGs_Blueprint, Phenotype_df = Phenotype, title = "IDHmvsCD34 Global differential methylation", diff = TRUE, show_cpgs = TRUE, comparison = c("IDHm","CD34"))
-
-Focus_global_methylation(filtered_DMP_IDHmvsIDHWT, match_hit_CpGs_Blueprint, Phenotype_df = Phenotype, title = "IDHmvsIDHWT Global differential methylation", diff = TRUE, show_cpgs = TRUE, comparison = c("IDHm","IDHWT"))
-
-Focus_global_methylation(filtered_DMP_IDHWT_vs_CD34, match_hit_CpGs_Blueprint, Phenotype_df = Phenotype, title = "IDHWT_vs_CD34 Global differential methylation", diff = TRUE, show_cpgs = TRUE, comparison = c("IDHWT","CD34"))
-
 ```
 
 
 ```{r}
+Focus_global_methylation(filtered_DMP_IDHmvsCD34, 
+                         match_hit_CpGs_Blueprint, 
+                         Phenotype_df = Phenotype, 
+                         diff = TRUE, 
+                         show_cpgs = TRUE, 
+                         comparison = c("IDHm","CD34"), 
+                         promoter = FALSE)
 
-Focus_Gene("SLC25A20", filtered_DMP_IDHmvsCD34, match_hit_CpGs_Blueprint, show_cpgs = TRUE, Phenotype, title = "Differential_promoter_methylation_IDHmvsCD34", diff = TRUE, comparison = c("IDHm","CD34"))
+Focus_global_methylation(filtered_DMP_IDHmvsIDHWT, 
+                         match_hit_CpGs_Blueprint, 
+                         Phenotype_df = Phenotype, 
+                         diff = TRUE, 
+                         show_cpgs = TRUE, 
+                         comparison = c("IDHm","IDHWT"), 
+                         promoter = FALSE)
+
+Focus_global_methylation(filtered_DMP_IDHWT_vs_CD34, 
+                         match_hit_CpGs_Blueprint, 
+                         Phenotype_df = Phenotype,
+                         diff = TRUE, 
+                         show_cpgs = TRUE, 
+                         comparison = c("IDHWT","CD34"), 
+                         promoter = FALSE)
+
+Focus_global_methylation(filtered_DMP_IDHmvsCD34, 
+                         match_hit_CpGs_Blueprint, 
+                         Phenotype_df = Phenotype, 
+                         diff = TRUE, 
+                         show_cpgs = TRUE, 
+                         comparison = c("IDHm","CD34"))
+
+Focus_global_methylation(filtered_DMP_IDHmvsIDHWT,
+                         match_hit_CpGs_Blueprint,
+                         Phenotype_df = Phenotype,
+                         diff = TRUE, 
+                         show_cpgs = TRUE, 
+                         comparison = c("IDHm","IDHWT"))
+
+Focus_global_methylation(filtered_DMP_IDHWT_vs_CD34, 
+                         match_hit_CpGs_Blueprint, 
+                         Phenotype_df = Phenotype, 
+                         diff = TRUE, 
+                         show_cpgs = TRUE,
+                         comparison = c("IDHWT","CD34"))
+
+```
+```{r}
+TS_noCD34 <- Phenotype_no_CD34$Phenotype
+TS_noCD34 <- factor(TS, levels = c("IDHm", "IDHWT"))
+design_noCD34 <- model.matrix(~ 0 + TS_noCD34)
+colnames(design_noCD34) <- levels(TS_noCD34)
+fit_noCD34 <- lmFit(BMIQ_met, design_noCD34)
+
+cont.matrix_noCD34 <- makeContrasts(
+  IDHm_vs_IDHWT = IDHm - IDHWT,
+  levels = design_noCD34
+)
+fit.contrast_noCD34 <- contrasts.fit(fit_noCD34, cont.matrix_noCD34)
+efit.contrast_noCD34 <- eBayes(fit.contrast_noCD34)
+
+filtered_DMP_IDHmvsIDHWT_noCD34 <- data.frame(logFC = efit.contrast_noCD34[["coefficients"]][,1], pvalue = efit.contrast_noCD34[["p.value"]][,1]) %>%
+  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
+  dplyr::filter(., pvalue < 0.01) %>%
+  merge(., BMIQ_met, by.x = 0, by.y = 0)
+rownames(filtered_DMP_IDHmvsIDHWT_noCD34) <- filtered_DMP_IDHmvsIDHWT_noCD34$Row.names
+filtered_DMP_IDHmvsIDHWT_noCD34 <- filtered_DMP_IDHmvsIDHWT_noCD34[,-1]
+```
+
+
+```{r}
+for (i in gene_list){
+  Focus_Gene(i, 
+             filtered_DMP_IDHmvsCD34,
+             match_hit_CpGs_Blueprint, 
+             show_cpgs = TRUE, 
+             Phenotype, 
+             diff = TRUE, 
+             comparison = c("IDHm","CD34"))
+}
 
 for (i in gene_list){
-  Focus_Gene(i, filtered_DMP_IDHmvsCD34, match_hit_CpGs_Blueprint, show_cpgs = TRUE, Phenotype, title = "Differential_promoter_methylation_IDHmvsCD34", diff = TRUE, comparison = c("IDHm","CD34"))
+  Focus_Gene(i,
+             filtered_DMP_IDHmvsIDHWT_noCD34,
+             match_hit_CpGs_Blueprint, 
+             show_cpgs = TRUE, 
+             Phenotype_no_CD34, 
+             diff = TRUE, 
+             comparison = c("IDHm","IDHWT"))
 }
+
 for (i in gene_list){
-  Focus_Gene(i, filtered_DMPIDHmvsIDHWT, match_hit_CpGs_Blueprint, show_cpgs = TRUE, Phenotype, title = "Differential_promoter_methylation_IDHmvsIDHWT", diff = TRUE, comparison = c("IDHm","IDHWT"))
-}
-for (i in gene_list){
-  Focus_Gene(i, filtered_DMPIDHWT_vs_CD34, match_hit_CpGs_Blueprint, show_cpgs = TRUE, Phenotype, title = "Differential_promoter_methylation_IDHWT_vs_CD34", diff = TRUE, comparison = c("IDHWT","CD34"))
+  Focus_Gene(i, 
+             filtered_DMP_IDHWT_vs_CD34, 
+             match_hit_CpGs_Blueprint, 
+             show_cpgs = TRUE, 
+             Phenotype, 
+             diff = TRUE, 
+             comparison = c("IDHWT","CD34"))
 }
 ```
 
 ```{r}
-Global_methylation(BMIQ_all, match_hit_CpGs_Blueprint, show_cpgs = TRUE, Phenotype, title = "Global_promoter_methylation", comparison = c("IDHm", "IDHWT"))
+Global_methylation(BMIQ_all, match_hit_CpGs_Blueprint, show_cpgs = FALSE, Phenotype, comparison = c("IDHm", "IDHWT"))
 ```
 
+```{r}
+load("../DATA/BMIQ_all.RData")
+
+Phenotype_TCGA <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
+  dplyr::filter(., WT1 == "WT1WT", DNMT3A == "DNMT3AWT", TET2 == "TET2WT")
+
+Phenotype_TCGA$Phenotype <- ifelse(Phenotype_TCGA$IDH == "IDHm", "IDHm", 
+                                   ifelse(Phenotype_TCGA$FLT3 == "FLT3m", "FLT3m", "WT"))
+  
+Phenotype_TCGA <- dplyr::select(Phenotype_TCGA, c(X, Phenotype)) %>%
+  rbind(data.frame(X = colnames(BMIQ_CD34), Phenotype = rep("CD34", 6)))
+
+Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
+Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
+
+DATA_met_CD34_IDH_FLT3 <- BMIQ_all %>%
+  dplyr::select(., Phenotype_TCGA$X)
+```
+
+```{r}
+for (i in gene_list){
+  Focus_Gene_FLT3(i, DATA_met_CD34_IDH_FLT3, match_hit_CpGs_Blueprint, Phenotype_TCGA)
+}
+```
+
+
+
+```{r}
+load("../DATA/BMIQ_all.RData")
+
+Phenotype_TCGA <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
+  dplyr::filter(., WT1 == "WT1WT", DNMT3A == "DNMT3AWT", TET2 == "TET2WT")
+
+Phenotype_TCGA$Phenotype <- ifelse(Phenotype_TCGA$IDH == "IDHm", "IDHm", 
+                                   ifelse(Phenotype_TCGA$FLT3 == "FLT3m", "FLT3m", "WT"))
+  
+Phenotype_TCGA <- dplyr::select(Phenotype_TCGA, c(X, Phenotype)) %>%
+  rbind(data.frame(X = colnames(BMIQ_CD34), Phenotype = rep("CD34", 6)))
+
+Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
+Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
+
+DATA_met_CD34_IDH_FLT3 <- BMIQ_all %>%
+  dplyr::select(., Phenotype_TCGA$X)
+
+match_hit_CpGs_Blueprint_promoter <- dplyr::filter(match_hit_CpGs_Blueprint, type == "P")
+
+anno_promoter <- dplyr::filter(anno, UCSC_RefGene_Group == "TSS1500" | UCSC_RefGene_Group == "TSS200")
+
+Focus_Gene_global_methylation("CPT1A", match_hit_CpGs_Blueprint, anno_promoter, Phenotype_TCGA, DATA_met_CD34_IDH_FLT3, c("FLT3m", "WT"), c("#00FF00", "#888888", "#FF0000", "#0000FF"))
+
+Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint, anno_promoter, Phenotype_no_CD34, BMIQ_met, c("IDHm", "IDHWT"), c("#FF0000", "#0000FF"))
+
+for (i in gene_list){
+  Focus_Gene_global_methylation(i, match_hit_CpGs_Blueprint, anno_promoter, Phenotype_no_CD34, BMIQ_met, c("IDHm", "IDHWT"), c("#FF0000", "#0000FF"))
+}
+
+CpGs_DM <- rownames(filtered_DMP_IDHmvsIDHWT)
+  
+for (i in gene_list){
+  Focus_Gene_differential_methylation(i, match_hit_CpGs_Blueprint, anno_promoter, Phenotype_no_CD34, BMIQ_met, CpGs_DM, c("IDHm", "IDHWT"), c("#FF0000", "#0000FF"))
+}
+
+
+```
