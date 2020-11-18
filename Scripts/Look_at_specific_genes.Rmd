@@ -11,9 +11,9 @@ source("packages.R")
 load("../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
 load("../DATA/IDHm/Methylation/BMIQ_IDHm.RData")
 load("../DATA/BMIQ_all.RData")
-load("~/DATA/Methyl_DATA_Wang_Feng.RData")
-load("~/DATA/Whiele/DATA_whiele.RData")
-load("~/GitHub/Epigenomic_integration/DATA/Wang_Feng_RNAseq.RData")
+load("../DATA/Methyl_DATA_Wang_Feng.RData")
+load("../DATA/DATA_whiele.RData")
+load("../DATA/Wang_Feng_RNAseq.RData")
 
 
 gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
@@ -358,19 +358,155 @@ signature <- read.csv("../DATA/BPmetCan.txt", sep = "\t")
 rownames(signature) <- signature$CpGs
 signature <- signature[,-1]
 
-res <- epidish(as.matrix(BMIQ_Wang_Feng), as.matrix(signature), method = "RPC")
-Fres <- as.data.frame(res$estF)
-Fres <- cbind(Sample = rownames(Fres), Fres)
-Fres[, -1] <- round(Fres[, -1], 3)
+Baseline_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "Baseline", "Sample_number"]
 
-deconvolution_violin <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
-                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
-deconvolution_violin$Values <- round(deconvolution_violin$Values, 1)
-                                                                                                                                                                                                                                             
-p <- ggplot(deconvolution_violin, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+res_Baseline <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Baseline_sample)), as.matrix(signature), method = "RPC")
+Fres_Baseline <- as.data.frame(res_Baseline$estF)
+Fres_Baseline <- cbind(Sample = rownames(Fres_Baseline), Fres_Baseline)
+Fres_Baseline[, -1] <- round(Fres_Baseline[, -1], 3)
+
+deconvolution_violin_Baseline <- data.frame(Cell_Type = rep(colnames(Fres_Baseline[,c(2:12)]), each = length(rownames(Fres_Baseline))),
+                          Values = Fres_Baseline[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Baseline$Values <- round(deconvolution_violin_Baseline$Values, 1)
+
+Responder_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "Responder", "Sample_number"]
+
+res_Responder <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Responder_sample)), as.matrix(signature), method = "RPC")
+Fres_Responder <- as.data.frame(res_Responder$estF)
+Fres_Responder <- cbind(Sample = rownames(Fres_Responder), Fres_Responder)
+Fres_Responder[, -1] <- round(Fres_Responder[, -1], 3)
+
+deconvolution_violin_Responder <- data.frame(Cell_Type = rep(colnames(Fres_Responder[,c(2:12)]), each = length(rownames(Fres_Responder))),
+                          Values = Fres_Responder[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Responder$Values <- round(deconvolution_violin_Responder$Values, 1)
+
+
+Non_Responder_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "Non_Responder", "Sample_number"]
+
+res_Non_Responder <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Non_Responder_sample)), as.matrix(signature), method = "RPC")
+Fres_Non_Responder <- as.data.frame(res_Non_Responder$estF)
+Fres_Non_Responder <- cbind(Sample = rownames(Fres_Non_Responder), Fres_Non_Responder)
+Fres_Non_Responder[, -1] <- round(Fres_Non_Responder[, -1], 3)
+
+deconvolution_violin_Non_Responder <- data.frame(Cell_Type = rep(colnames(Fres_Non_Responder[,c(2:12)]), each = length(rownames(Fres_Non_Responder))),
+                          Values = Fres_Non_Responder[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Non_Responder$Values <- round(deconvolution_violin_Non_Responder$Values, 1)
+
+
+
+
+Control_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "Control", "Sample_number"]
+
+res_Control <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Control_sample)), as.matrix(signature), method = "RPC")
+Fres_Control <- as.data.frame(res_Control$estF)
+Fres_Control <- cbind(Sample = rownames(Fres_Control), Fres_Control)
+Fres_Control[, -1] <- round(Fres_Control[, -1], 3)
+
+deconvolution_violin_Control <- data.frame(Cell_Type = rep(colnames(Fres_Control[,c(2:12)]), each = length(rownames(Fres_Control))),
+                          Values = Fres_Control[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Control$Values <- round(deconvolution_violin_Control$Values, 1)
+```
+
+
+```{r}
+p <- ggplot(deconvolution_violin_Baseline, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
   geom_violin() + 
-  theme_grey(base_size = 40) +
+  ggtitle("Baseline")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-p
+ggsave(
+    filename = "../Results/Wang_Feng_Results/Deconv/Baseline.png",
+    plot = last_plot(),
+    device = NULL,
+    path = NULL,
+    scale = 1,
+    width = NA,
+    height = NA,
+    units = c("in", "cm", "mm"),
+    dpi = 300,
+    limitsize = TRUE
+  )
+
+p <- ggplot(deconvolution_violin_Responder, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("Responder")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggsave(
+    filename = "../Results/Wang_Feng_Results/Deconv/Responder.png",
+    plot = last_plot(),
+    device = NULL,
+    path = NULL,
+    scale = 1,
+    width = NA,
+    height = NA,
+    units = c("in", "cm", "mm"),
+    dpi = 300,
+    limitsize = TRUE
+  )
+
+p <- ggplot(deconvolution_violin_Non_Responder, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("Non_Responder")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggsave(
+    filename = "../Results/Wang_Feng_Results/Deconv/Non_Responder.png",
+    plot = last_plot(),
+    device = NULL,
+    path = NULL,
+    scale = 1,
+    width = NA,
+    height = NA,
+    units = c("in", "cm", "mm"),
+    dpi = 300,
+    limitsize = TRUE
+  )
+
+
+p <- ggplot(deconvolution_violin_Control, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("Control")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggsave(
+    filename = "../Results/Wang_Feng_Results/Deconv/Control.png",
+    plot = last_plot(),
+    device = NULL,
+    path = NULL,
+    scale = 1,
+    width = NA,
+    height = NA,
+    units = c("in", "cm", "mm"),
+    dpi = 300,
+    limitsize = TRUE
+  )
+```
+
+```{r}
+CpGs_variance <- rowVars(BMIQ_Wang_Feng) %>% as.data.frame(.)
+
+colnames(CpGs_variance) <- c("Variance")
+CpGs_variance$CpGs <- rownames(CpGs_variance)
+
+CpGs_variance <- CpGs_variance[order(-CpGs_variance$Variance),]
+
+Top_CpGs <- head(CpGs_variance, round(length(CpGs_variance[,1])/100))
+
+BMIQ_Wang_Feng_high_variance <- BMIQ_Wang_Feng %>%
+  .[Top_CpGs$CpGs,]
+
+
+BMIQ_Wang_Feng_high_variance_analysis <- Differential_analysis(Phenotype_Wang_Feng$Phenotype, BMIQ_Wang_Feng_high_variance)
+
+Focus_global_methylation(match_hit_CpGs_Blueprint, anno, Phenotype_Wang_Feng, BMIQ_Wang_Feng_high_variance, c("Baseline", "Control"), fill_colour = c("#0000FF", "#777777", "#FF0000", "#00FF00"))
+```
+
+```{r}
+
 ```
 

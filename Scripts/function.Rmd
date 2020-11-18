@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 ```{r}
-Differential_analysis <- function(Focused_variable, DATA, type_of_data){
+Differential_analysis <- function(Focused_variable, DATA, type_of_data = ""){
   design.pairs <- function(levels) {
     n <- length(levels)
     design <- matrix(0,n,choose(n,2))
@@ -217,7 +217,7 @@ Focus_global_methylation <- function(match_hit_CpGs_Blueprint_promoter,
   nb_phenot <- length(levels(as.factor(Phenotype$Phenotype)))
 
   text_cpg <- create_text_cpg(diff = TRUE, rownames(Methylation))
-
+  
   Create_graph(DATA_boxplot = Beta_value,
                DATA_jitter = Aggregated_CpGs,
                Phenotype = Phenotype,
@@ -590,7 +590,6 @@ Create_graph <- function(DATA_boxplot,
   }else{
     xpos_annotations <- 2
   }
-
   ggplot(DATA_boxplot, aes(y=Beta_values, x = Phenotype, fill = Phenotype))+
     geom_boxplot(alpha=0.25, outlier.size = -1)+
     geom_jitter(DATA_jitter, inherit.aes = FALSE, mapping = aes(y = Beta_values, x = Phenotype), width = 0.25, alpha = 0.5, colour = "darkred")+
@@ -598,17 +597,17 @@ Create_graph <- function(DATA_boxplot,
     scale_fill_manual(values = fill_colour)+
     annotate("text", x = 1, y = -0.11, label = paste0("n = ", nb_sample[[1]]))+
     annotate("text", x = 2, y = -0.11, label = paste0("n = ", nb_sample[[2]]))+
-    #annotate("text", x = 3, y = -0.11, label = paste0("n = ", nb_sample[[3]]))+
-    #annotate("text", x = 4, y = -0.11, label = paste0("n = ", nb_sample[[4]]))+
-    annotate("text", x = xpos_annotations, y = 0.25, label = text_cpg) +
+    annotate("text", x = 3, y = -0.11, label = paste0("n = ", nb_sample[[3]]))+
+    annotate("text", x = 4, y = -0.11, label = paste0("n = ", nb_sample[[4]]))+
     # annotate("text", x = 5, y = -0.11, label = paste0("n = ", nb_sample[[5]]))+
     # annotate("text", x = 6, y = -0.11, label = paste0("n = ", nb_sample[[6]]))+
+    annotate("text", x = xpos_annotations, y = 0.25, label = text_cpg) +
     ggtitle(title)+
     xlab("")+
     theme(plot.title = element_text(vjust = 2))+
     ylab("Beta-value of methylation")+
     scale_shape_manual(values=c(0,1,2,5,6,7))+
-    geom_signif(comparisons = list(comparison), map_signif_level=TRUE, textsize = 2.8, fontface = "italic", annotations = c("ns"), y_position = 0.265)+  
+    geom_signif(comparisons = list(comparison), map_signif_level=TRUE)+  
     theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
 
   ggsave(
@@ -624,5 +623,11 @@ Create_graph <- function(DATA_boxplot,
     limitsize = TRUE
   )
 }
+```
+
+
+
+```{r}
+Focus_high_variance_CpGs <- function(DATA_met)
 ```
 
