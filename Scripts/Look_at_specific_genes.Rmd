@@ -2,8 +2,7 @@
 title: "R Notebook"
 output: html_notebook
 ---
-
-```{r}
+```{r, include=FALSE}
 source("packages.R")
 #source("functions.R")
 
@@ -12,8 +11,13 @@ source("packages.R")
 load("../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
 load("../DATA/IDHm/Methylation/BMIQ_IDHm.RData")
 load("../DATA/BMIQ_all.RData")
-```
+load("~/DATA/Methyl_DATA_Wang_Feng.RData")
+load("~/DATA/Whiele/DATA_whiele.RData")
+load("~/GitHub/Epigenomic_integration/DATA/Wang_Feng_RNAseq.RData")
 
+
+gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
+```
 
 ```{r}
 Blueprint <- read.csv("../BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
@@ -46,259 +50,103 @@ overlaps_CpGs_Blueprint <- findOverlaps(Blueprint_Granges, CpGs_Granges)
 match_hit_CpGs_Blueprint <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_CpGs_Blueprint),]),
                                        data.frame(mcols(CpGs_Granges[subjectHits(overlaps_CpGs_Blueprint),])))
 
-```
-
-```{r}
-gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT1", "AKT2", "AKT3", "PPARGC1A", "PTEN")
-
-BMIQ_met <- dplyr::select(BMIQ_all, colnames(BMIQ_all)[str_detect(colnames(BMIQ_all), "TCGA")])
-
-Phenotype_TCGA <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
-  dplyr::filter(., DNMT3A == "DNMT3AWT" & TET2 == "TET2WT" & WT1 == "WT1WT" & FLT3 == "FLT3AWT")
-Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".") %>% str_replace(., "-", ".")
-
-BMIQ_met <- dplyr::select(BMIQ_met, Phenotype_TCGA$X)
-
-BMIQ_all <- merge(BMIQ_met, BMIQ_CD34, by = 0)
-rownames(BMIQ_all) <- BMIQ_all$Row.names
-BMIQ_all <- BMIQ_all[,-1]
-
-Phenotype <- data.frame("Sample" = colnames(BMIQ_all),
-                        "Phenotype" = ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_IDHm), 
-                                             "IDHm", ifelse(colnames(BMIQ_all) %in% colnames(BMIQ_CD34), 
-                                                            "CD34", 
-                                                            "IDHWT")))
-
-Phenotype_no_CD34 <- data.frame("Sample" = colnames(BMIQ_met),
-                                "Phenotype" = ifelse(colnames(BMIQ_met) %in% colnames(BMIQ_IDHm), 
-                                                     "IDHm", 
-                                                     "IDHWT"))
-```
-
-
-```{r}
-for (i in gene_list){
-  Focus_Gene(i, 
-             BMIQ_met, 
-             match_hit_CpGs_Blueprint, 
-             show_cpgs = TRUE, 
-             Phenotype_no_CD34, 
-             diff = FALSE, 
-             comparison = c("IDHm", "IDHWT"))
-}
-```
-
-
-```{r}
-for (i in gene_list){
-  Focus_Gene(i, 
-             BMIQ_all, 
-             match_hit_CpGs_Blueprint, 
-             show_cpgs = FALSE, 
-             Phenotype, 
-             diff = FALSE, 
-             comparison = c("IDHm", "IDHWT"))
-}
-```
-
-```{r}
-TS <- Phenotype$Phenotype
-TS <- factor(TS, levels = c("CD34", "IDHm", "IDHWT"))
-design <- model.matrix(~ 0 + TS)
-colnames(design) <- levels(TS)
-fit <- lmFit(BMIQ_all, design)
-
-cont.matrix <- makeContrasts(
-  IDHm_vs_CD34 = CD34 - IDHm,
-  IDHm_vs_IDHWT = IDHm - IDHWT,
-  IDHWT_vs_CD34 = IDHWT - CD34,
-  levels = design
-)
-fit.contrast <- contrasts.fit(fit, cont.matrix)
-efit.contrast <- eBayes(fit.contrast)
-
-filtered_DMP_IDHmvsCD34 <- data.frame(logFC = efit.contrast[["coefficients"]][,1], pvalue = efit.contrast[["p.value"]][,1]) %>%
-  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
-  dplyr::filter(., pvalue < 0.01) %>%
-  merge(., BMIQ_all, by.x = 0, by.y = 0)
-rownames(filtered_DMP_IDHmvsCD34) <- filtered_DMP_IDHmvsCD34$Row.names
-filtered_DMP_IDHmvsCD34 <- filtered_DMP_IDHmvsCD34[,-1]
-
-filtered_DMP_IDHmvsIDHWT <- data.frame(logFC = efit.contrast[["coefficients"]][,2], pvalue = efit.contrast[["p.value"]][,2]) %>%
-  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
-  dplyr::filter(., pvalue < 0.01) %>%
-  merge(., BMIQ_all, by.x = 0, by.y = 0)
-rownames(filtered_DMP_IDHmvsIDHWT) <- filtered_DMP_IDHmvsIDHWT$Row.names
-filtered_DMP_IDHmvsIDHWT <- filtered_DMP_IDHmvsIDHWT[,-1]
-
-filtered_DMP_IDHWT_vs_CD34 <- data.frame(logFC = efit.contrast[["coefficients"]][,3], pvalue = efit.contrast[["p.value"]][,3]) %>%
-  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
-  dplyr::filter(., pvalue < 0.01) %>%
-  merge(., BMIQ_all, by.x = 0, by.y = 0)
-rownames(filtered_DMP_IDHWT_vs_CD34) <- filtered_DMP_IDHWT_vs_CD34$Row.names
-filtered_DMP_IDHWT_vs_CD34 <- filtered_DMP_IDHWT_vs_CD34[,-1]
-```
-
-
-```{r}
-Focus_global_methylation(filtered_DMP_IDHmvsCD34, 
-                         match_hit_CpGs_Blueprint, 
-                         Phenotype_df = Phenotype, 
-                         diff = TRUE, 
-                         show_cpgs = TRUE, 
-                         comparison = c("IDHm","CD34"), 
-                         promoter = FALSE)
-
-Focus_global_methylation(filtered_DMP_IDHmvsIDHWT, 
-                         match_hit_CpGs_Blueprint, 
-                         Phenotype_df = Phenotype, 
-                         diff = TRUE, 
-                         show_cpgs = TRUE, 
-                         comparison = c("IDHm","IDHWT"), 
-                         promoter = FALSE)
-
-Focus_global_methylation(filtered_DMP_IDHWT_vs_CD34, 
-                         match_hit_CpGs_Blueprint, 
-                         Phenotype_df = Phenotype,
-                         diff = TRUE, 
-                         show_cpgs = TRUE, 
-                         comparison = c("IDHWT","CD34"), 
-                         promoter = FALSE)
-
-Focus_global_methylation(filtered_DMP_IDHmvsCD34, 
-                         match_hit_CpGs_Blueprint, 
-                         Phenotype_df = Phenotype, 
-                         diff = TRUE, 
-                         show_cpgs = TRUE, 
-                         comparison = c("IDHm","CD34"))
-
-Focus_global_methylation(filtered_DMP_IDHmvsIDHWT,
-                         match_hit_CpGs_Blueprint,
-                         Phenotype_df = Phenotype,
-                         diff = TRUE, 
-                         show_cpgs = TRUE, 
-                         comparison = c("IDHm","IDHWT"))
-
-Focus_global_methylation(filtered_DMP_IDHWT_vs_CD34, 
-                         match_hit_CpGs_Blueprint, 
-                         Phenotype_df = Phenotype, 
-                         diff = TRUE, 
-                         show_cpgs = TRUE,
-                         comparison = c("IDHWT","CD34"))
-
-```
-```{r}
-TS_noCD34 <- Phenotype_no_CD34$Phenotype
-TS_noCD34 <- factor(TS, levels = c("IDHm", "IDHWT"))
-design_noCD34 <- model.matrix(~ 0 + TS_noCD34)
-colnames(design_noCD34) <- levels(TS_noCD34)
-fit_noCD34 <- lmFit(BMIQ_met, design_noCD34)
-
-cont.matrix_noCD34 <- makeContrasts(
-  IDHm_vs_IDHWT = IDHm - IDHWT,
-  levels = design_noCD34
-)
-fit.contrast_noCD34 <- contrasts.fit(fit_noCD34, cont.matrix_noCD34)
-efit.contrast_noCD34 <- eBayes(fit.contrast_noCD34)
-
-filtered_DMP_IDHmvsIDHWT_noCD34 <- data.frame(logFC = efit.contrast_noCD34[["coefficients"]][,1], pvalue = efit.contrast_noCD34[["p.value"]][,1]) %>%
-  dplyr::filter(., logFC > 0.3 | logFC < -0.3) %>%
-  dplyr::filter(., pvalue < 0.01) %>%
-  merge(., BMIQ_met, by.x = 0, by.y = 0)
-rownames(filtered_DMP_IDHmvsIDHWT_noCD34) <- filtered_DMP_IDHmvsIDHWT_noCD34$Row.names
-filtered_DMP_IDHmvsIDHWT_noCD34 <- filtered_DMP_IDHmvsIDHWT_noCD34[,-1]
-```
-
-
-```{r}
-for (i in gene_list){
-  Focus_Gene(i, 
-             filtered_DMP_IDHmvsCD34,
-             match_hit_CpGs_Blueprint, 
-             show_cpgs = TRUE, 
-             Phenotype, 
-             diff = TRUE, 
-             comparison = c("IDHm","CD34"))
-}
-
-for (i in gene_list){
-  Focus_Gene(i,
-             filtered_DMP_IDHmvsIDHWT_noCD34,
-             match_hit_CpGs_Blueprint, 
-             show_cpgs = TRUE, 
-             Phenotype_no_CD34, 
-             diff = TRUE, 
-             comparison = c("IDHm","IDHWT"))
-}
-
-for (i in gene_list){
-  Focus_Gene(i, 
-             filtered_DMP_IDHWT_vs_CD34, 
-             match_hit_CpGs_Blueprint, 
-             show_cpgs = TRUE, 
-             Phenotype, 
-             diff = TRUE, 
-             comparison = c("IDHWT","CD34"))
-}
-```
-
-```{r}
-Global_methylation(BMIQ_all, match_hit_CpGs_Blueprint, show_cpgs = FALSE, Phenotype, comparison = c("IDHm", "IDHWT"))
-```
-
-```{r}
-load("../DATA/BMIQ_all.RData")
-
-Phenotype_TCGA <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
-  dplyr::filter(., WT1 == "WT1WT", DNMT3A == "DNMT3AWT", TET2 == "TET2WT")
-
-Phenotype_TCGA$Phenotype <- ifelse(Phenotype_TCGA$IDH == "IDHm", "IDHm", 
-                                   ifelse(Phenotype_TCGA$FLT3 == "FLT3m", "FLT3m", "WT"))
-  
-Phenotype_TCGA <- dplyr::select(Phenotype_TCGA, c(X, Phenotype)) %>%
-  rbind(data.frame(X = colnames(BMIQ_CD34), Phenotype = rep("CD34", 6)))
-
-Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
-Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
-
-DATA_met_CD34_IDH_FLT3 <- BMIQ_all %>%
-  dplyr::select(., Phenotype_TCGA$X)
-```
-
-```{r}
-for (i in gene_list){
-  Focus_Gene_FLT3(i, DATA_met_CD34_IDH_FLT3, match_hit_CpGs_Blueprint, Phenotype_TCGA)
-}
-```
-
-
-
-```{r}
-load("../DATA/BMIQ_all.RData")
-
-Phenotype_TCGA <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
-  dplyr::filter(., WT1 == "WT1WT", DNMT3A == "DNMT3AWT", TET2 == "TET2WT")
-
-Phenotype_TCGA$Phenotype <- ifelse(Phenotype_TCGA$IDH == "IDHm", "IDHm", 
-                                   ifelse(Phenotype_TCGA$FLT3 == "FLT3m", "FLT3m", "WT"))
-  
-Phenotype_TCGA <- dplyr::select(Phenotype_TCGA, c(X, Phenotype)) %>%
-  rbind(data.frame(X = colnames(BMIQ_CD34), Phenotype = rep("CD34", 6)))
-
-Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
-Phenotype_TCGA$X <- str_replace(Phenotype_TCGA$X, "-", ".")
-
-DATA_met_CD34_IDH_FLT3 <- BMIQ_all %>%
-  dplyr::select(., Phenotype_TCGA$X)
-
 match_hit_CpGs_Blueprint_promoter <- dplyr::filter(match_hit_CpGs_Blueprint, type == "P")
 
 anno_promoter <- dplyr::filter(anno, UCSC_RefGene_Group == "TSS1500" | UCSC_RefGene_Group == "TSS200")
 
-Focus_Gene_global_methylation("CPT1A", match_hit_CpGs_Blueprint, anno_promoter, Phenotype_TCGA, DATA_met_CD34_IDH_FLT3, c("FLT3m", "WT"), c("#00FF00", "#888888", "#FF0000", "#0000FF"))
+pchic <- prepare_pchic()
+List_Promoter <- unique(paste(pchic$baitChr, pchic$baitStart, sep = "_"))
+PCHiC_bed <- unique(rbind(pchic[, c(1:3, 5)], pchic[, c(6:8, 10)]))
+PCHiC_GRange <- GRanges(
+  seqnames = PCHiC_bed$chr,
+  IRanges(start = PCHiC_bed$start, end = PCHiC_bed$end),
+  Gene_Pchic = PCHiC_bed$Name,
+  start_fragment = PCHiC_bed$start,
+  end_fragment = PCHiC_bed$end
+)
+PCHiC_GRange$ID <- paste(PCHiC_bed$chr, PCHiC_bed$start, sep = "_")
+colnames(pchic) <- c("chr_bait", "start_bait", "end_bait", "ID_bait", "Name_bait", "chr_oe", "start_oe", "end_oe", "ID_oe", "Name_oe")
+pchic$IDbait <- paste(pchic$chr_bait, pchic$start_bait, sep = "_")
+pchic$IDoe <- paste(pchic$chr_oe, pchic$start_oe, sep = "_")
 
-Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint, anno_promoter, Phenotype_no_CD34, BMIQ_met, c("IDHm", "IDHWT"), c("#FF0000", "#0000FF"))
+overlaps_CpGs_Pchic <- findOverlaps(CpGs_Granges, PCHiC_GRange)
+matchit_CpGs_Pchic <- data.frame(mcols(CpGs_Granges[queryHits(overlaps_CpGs_Pchic),]),
+                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_CpGs_Pchic),])))
 
+```
+
+
+
+
+
+```{r}
+Phenotype_FLT3_IDH_CD34 <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
+  dplyr::filter(., WT1 == "WT1WT", DNMT3A == "DNMT3AWT", TET2 == "TET2WT")
+
+Phenotype_FLT3_IDH_CD34$Phenotype <- ifelse(Phenotype_FLT3_IDH_CD34$IDH == "IDHm", "IDHm", 
+                                   ifelse(Phenotype_FLT3_IDH_CD34$FLT3 == "FLT3m", "FLT3m", "WT"))
+  
+Phenotype_FLT3_IDH_CD34 <- dplyr::select(Phenotype_FLT3_IDH_CD34, c(X, Phenotype)) %>%
+  rbind(data.frame(X = colnames(BMIQ_CD34), Phenotype = rep("CD34", 6)))
+
+Phenotype_FLT3_IDH_CD34$X <- str_replace(Phenotype_FLT3_IDH_CD34$X, "-", ".")
+Phenotype_FLT3_IDH_CD34$X <- str_replace(Phenotype_FLT3_IDH_CD34$X, "-", ".")
+
+DATA_met_CD34_IDH_FLT3 <- BMIQ_all %>%
+  dplyr::select(., Phenotype_FLT3_IDH_CD34$X)
+
+
+Phenotype_BMIQ_CD34_IDHm_WT <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
+  dplyr::filter(., WT1 == "WT1WT", DNMT3A == "DNMT3AWT", TET2 == "TET2WT", FLT3 == "FLT3AWT")
+Phenotype_BMIQ_CD34_IDHm_WT$Phenotype <- ifelse(Phenotype_BMIQ_CD34_IDHm_WT$IDH == "IDHm", "IDHm", "WT")
+
+Phenotype_BMIQ_CD34_IDHm_WT <- dplyr::select(Phenotype_BMIQ_CD34_IDHm_WT, c(X, Phenotype)) %>%
+  rbind(data.frame(X = colnames(BMIQ_CD34), Phenotype = rep("CD34", 6)))
+
+Phenotype_BMIQ_CD34_IDHm_WT$X <- str_replace(Phenotype_BMIQ_CD34_IDHm_WT$X, "-", ".")
+Phenotype_BMIQ_CD34_IDHm_WT$X <- str_replace(Phenotype_BMIQ_CD34_IDHm_WT$X, "-", ".")
+
+BMIQ_CD34_IDHm_WT <- BMIQ_all %>%
+  dplyr::select(., Phenotype_BMIQ_CD34_IDHm_WT$X)
+
+```
+
+
+#### Looking at global methylation on promoter of specific genes through CD34 IDHm and IDHWT
+```{r}
+for (i in gene_list){
+  Focus_Gene_global_methylation(i, match_hit_CpGs_Blueprint_promoter, anno_promoter, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+}
+
+Focus_Gene_global_methylation("", match_hit_CpGs_Blueprint_promoter, anno_promoter, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+```
+#### Looking at global methylation on neighbor of promoter of specific genes through CD34 IDHm and IDHWT
+```{r}
+for (i in gene_list){
+  Focus_gene_promoter_neighborhood_methylation(i, match_hit_CpGs_Blueprint_promoter, anno_promoter, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic, pchic, match_hit_CpGs_Blueprint)
+}
+```
+
+
+
+
+
+```{r}
+efit.contrast <- Look_at_differential_methylation(Phenotype_TCGA, DATA_met_CD34_IDH_FLT3)
+
+print(colnames(efit.contrast[["coefficients"]]))
+
+filtered_DMP_IDHmvsWT <- Filter_comparison_methylation("IDHm_vs_WT", DATA_met_CD34_IDH_FLT3, efit.contrast)
+
+filtered_DMP_FLT3vsWT <- Filter_comparison_methylation("FLT3m_vs_WT", DATA_met_CD34_IDH_FLT3, efit.contrast)
+
+filtered_DMP_WTvsCD34 <- Filter_comparison_methylation("WT_vs_CD34", DATA_met_CD34_IDH_FLT3, efit.contrast)
+
+filtered_DMP_IDHmvsCD34 <- Filter_comparison_methylation("IDHm_vs_CD34", DATA_met_CD34_IDH_FLT3, efit.contrast)
+
+```
+
+```{r}
 for (i in gene_list){
   Focus_Gene_global_methylation(i, match_hit_CpGs_Blueprint, anno_promoter, Phenotype_no_CD34, BMIQ_met, c("IDHm", "IDHWT"), c("#FF0000", "#0000FF"))
 }
@@ -311,3 +159,218 @@ for (i in gene_list){
 
 
 ```
+
+
+#### DATA FENG WANG
+```{r}
+Phenotype_Wang_Feng_Control_Baseline <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "Baseline" | Phenotype == "Control")
+  
+BMIQ_Control_Baseline <- dplyr::select(BMIQ_Wang_Feng, Phenotype_Wang_Feng_Control_Baseline$Sample_number)
+
+ann_colors <- list(
+    Phenotype = c(Baseline = "blue", Responder = "green", Non_Responder = "red", Control = "grey"))
+annotation_for_heatmap <- data.frame(Phenotype = Phenotype_Wang_Feng_Control_Baseline$Phenotype)
+rownames(annotation_for_heatmap) <- colnames(BMIQ_Control_Baseline)
+corr_spearman_Control_Baseline <- rcorr(as.matrix(BMIQ_Control_Baseline), type = "spearman")$r
+colnames(corr_spearman_Control_Baseline) <- colnames(BMIQ_Control_Baseline)
+heatmap_corr_spearman_Control_Baseline <- pheatmap(corr_spearman_Control_Baseline, 
+       color = colorRampPalette(brewer.pal(n = 9, name = "YlOrRd"))(100),
+       annotation_col = annotation_for_heatmap,
+       annotation_colors = ann_colors,
+       legend = TRUE,
+       treeheight_row = 20,
+       main = "corr_spearman_Control_Baseline", 
+       fontsize = 10
+       )
+png(filename = paste0("../Results/Wang_Feng_Results/heatmap_corr_spearman_Control_Baseline.png"), width = 960, height = 540)
+heatmap_corr_spearman_Control_Baseline
+dev.off()
+
+
+
+
+
+
+Phenotype_Wang_Feng_Responder_Non_Responder <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype != "Baseline" & Phenotype != "Control")
+
+BMIQ_Responder_Non_Responder <- dplyr::select(BMIQ_Wang_Feng, Phenotype_Wang_Feng_Responder_Non_Responder$Sample_number)
+
+annotation_for_heatmap <- data.frame(Phenotype = Phenotype_Wang_Feng_Responder_Non_Responder$Phenotype)
+rownames(annotation_for_heatmap) <- colnames(BMIQ_Responder_Non_Responder)
+corr_pearson_Responder_Non_Responder <- rcorr(as.matrix(BMIQ_Responder_Non_Responder), type = "pearson")$r
+colnames(corr_pearson_Responder_Non_Responder) <- colnames(BMIQ_Responder_Non_Responder)
+heatmap_corr_pearson_Responder_Non_Responder <- pheatmap(corr_pearson_Responder_Non_Responder, 
+       color = colorRampPalette(brewer.pal(n = 9, name = "YlOrRd"))(100),
+       annotation_col = annotation_for_heatmap,
+       annotation_colors = ann_colors,
+       legend = TRUE,
+       treeheight_row = 20,
+       main = "corr_pearson_Responder_Non_Responder", 
+       fontsize = 10
+       )
+png(filename = paste0("../Results/Wang_Feng_Results/heatmap_corr_pearson_Responder_Non_Responder.png"), width = 960, height = 540)
+heatmap_corr_pearson_Responder_Non_Responder
+dev.off()
+
+png(filename = paste0("../Results/Wang_Feng_Results/heatmap_spearman_BMIQ_Wang_Feng.png"), width = 960, height = 540)
+heatmap_spearman
+dev.off()
+png(filename = paste0("../Results/Wang_Feng_Results/heatmap_pearson_BMIQ_Wang_Feng.png"), width = 960, height = 540)
+heatmap_pearson
+dev.off()
+
+
+
+```
+
+```{r}
+for (i in gene_list){
+  Focus_Gene_global_methylation(i, match_hit_CpGs_Blueprint, anno_promoter, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Baseline", "Control"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), Change_directory = "Wang_Feng_Results/")
+}
+```
+
+```{r}
+for (i in gene_list){
+  Focus_gene_promoter_neighborhood_methylation(i, match_hit_CpGs_Blueprint_promoter, anno_promoter, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Baseline", "Control"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic, pchic, match_hit_CpGs_Blueprint, Change_directory = "Wang_Feng_Results/")
+}
+```
+
+
+
+
+
+```{r}
+for (i in gene_list){
+  Focus_Gene_global_methylation(i, match_hit_CpGs_Blueprint, anno_promoter, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#00FF00", "#0000FF"), Change_directory = "Whiele_Results/")
+}
+
+Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint, anno_promoter, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), Change_directory = "Whiele_Results/")
+
+
+```
+```{r}
+for (i in gene_list){
+  Focus_gene_promoter_neighborhood_methylation(i, match_hit_CpGs_Blueprint_promoter, anno_promoter, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m","WT"), c("#555555", "#FF0000", "#00FF00", "#0000FF"), matchit_CpGs_Pchic, pchic, match_hit_CpGs_Blueprint, Change_directory = "Whiele_Results/")
+}
+```
+
+
+```{r}
+Phenotype_noCD34 <- Phenotype_BMIQ_CD34_IDHm_WT %>%
+  dplyr::filter(., Phenotype !="CD34")
+
+BMIQ_noCD34 <- BMIQ_all %>%
+  dplyr::select(., Phenotype_noCD34$X)
+
+for (i in gene_list){
+  Focus_Gene_global_methylation(i, match_hit_CpGs_Blueprint, anno_promoter, Phenotype_noCD34, BMIQ_noCD34, c("IDHm", "WT"), c("#FF0000", "#0000FF"), Change_directory = "NoCD34/")
+}
+```
+```{r}
+for (i in gene_list){
+  Focus_gene_promoter_neighborhood_methylation(i, match_hit_CpGs_Blueprint_promoter, anno_promoter, Phenotype_noCD34, BMIQ_noCD34, c("IDHm","WT"), c("#FF0000", "#0000FF"), matchit_CpGs_Pchic, pchic, match_hit_CpGs_Blueprint, Change_directory = "NoCD34/")
+}
+```
+
+```{r}
+Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint, anno_promoter, Phenotype_noCD34, BMIQ_noCD34, c("IDHm", "WT"), c("#FF0000", "#0000FF"), Change_directory = "NoCD34/")
+```
+
+
+## RNAseq_Wang_Feng
+```{r}
+RNAseq_Wang_Feng_analysis <- Differential_analysis(Phenotype_Wang_Feng_RNAseq$Phenotype, RNAseq_Wang_Feng, "gene expression")[[1]]
+
+ann_colors <- list(
+    Phenotype = c(Baseline = "blue", Relapse = "red"))
+annotation_for_heatmap <- data.frame(Phenotype = Phenotype_Wang_Feng_RNAseq$Phenotype)
+rownames(annotation_for_heatmap) <- colnames(RNAseq_Wang_Feng)
+corr_spearman_Baseline_Relapse <- rcorr(as.matrix(RNAseq_Wang_Feng), type = "spearman")$r
+colnames(corr_spearman_Baseline_Relapse) <- colnames(RNAseq_Wang_Feng)
+heatmap_corr_spearman_Baseline_Relapse <- pheatmap(corr_spearman_Baseline_Relapse, 
+       color = colorRampPalette(brewer.pal(n = 9, name = "YlOrRd"))(100),
+       annotation_col = annotation_for_heatmap,
+       annotation_colors = ann_colors,
+       legend = TRUE,
+       treeheight_row = 20,
+       main = "corr_spearman_Baseline_Relapse", 
+       fontsize = 10
+       )
+
+```
+
+```{r}
+
+
+up_entrez <- Baseline_Relapse_gene_expression_analysis %>%
+  dplyr::filter(., logFC > 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+down_entrez <- Baseline_Relapse_gene_expression_analysis %>%
+  dplyr::filter(., logFC < 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+
+
+
+
+message("========================================================")
+message("[-----------------Comparison starting-------------------]")
+ego_up <- enrichGO(
+  gene = unique(up_entrez$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none"
+)
+ego_down <- enrichGO(
+  gene = unique(down_entrez$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none"
+)
+
+dotplot(ego_up, showCategory = 30)
+dotplot(ego_down, showCategory = 30)
+```
+
+
+```{r}
+Genes_up <- up_entrez$ID %>%
+  sapply(., function(gene) {
+    ifelse(length(Gene_name_finding(gene)) >0, TRUE, FALSE)
+  }) %>%
+  up_entrez$ID[.]
+
+Genes_down <- down_entrez$ID %>%
+  sapply(., function(gene) {
+    ifelse(length(Gene_name_finding(gene)) >0, TRUE, FALSE)
+  }) %>%
+  down_entrez$ID[.]
+
+```
+
+```{r}
+signature <- read.csv("../DATA/BPmetCan.txt", sep = "\t")
+rownames(signature) <- signature$CpGs
+signature <- signature[,-1]
+
+res <- epidish(as.matrix(BMIQ_Wang_Feng), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin$Values <- round(deconvolution_violin$Values, 1)
+                                                                                                                                                                                                                                             
+p <- ggplot(deconvolution_violin, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  theme_grey(base_size = 40) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+p
+```
+

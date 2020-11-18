@@ -6,11 +6,11 @@ output: html_notebook
 
 
 ```{r}
-if (!exists("a")){
-  source("functions.R")
-  source("packages.R")
-  # a <- 0
-}
+source("packages.R")
+ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+source("~/GitHub/Epigenomic_integration/DATA/Wang_Feng_RNAseq.RData")
+
+
 ```
 
 ```{r}
@@ -33,10 +33,6 @@ Gene_expression_comparison <- Differential_analysis(Phenotype$IDH, Gene_expressi
 ```
 
 ```{r}
-if (!exists("ensembl")){
-  ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-}
-
 Genes_differentially_expressed <- add_genes_coordinates(Gene_expression_comparison[[1]]) %>% filter(., (logFC**2 > 2.25 & P.Value < 0.05 & hgnc_symbol != "")) %>% dplyr::select(., logFC, AveExpr, P.Value, hgnc_symbol)
 
 Genes_differentially_expressed$sens <- ifelse(Genes_differentially_expressed$logFC > 0, "up_regulated", "down_regulated")
@@ -66,5 +62,67 @@ if (length(rownames(Methylation_data) > 450000)) {
 CpGs_differentially_methylated_annotated <- merge(CpGs_differentially_methylated, anno, by.x = "ID", by.y = "Name")
 
 write.csv(CpGs_differentially_methylated_annotated, "../Results/CpGs_differentially_methylated.csv")
+```
+
+
+## RNAseq_Wang_Feng
+```{r}
+RNAseq_Wang_Feng_analysis <- Differential_analysis(Phenotype_Wang_Feng_RNAseq$Phenotype, RNAseq_Wang_Feng, "gene expression")[[1]]
+
+
+Baseline_Relapse_gene_expression_analysis <- RNAseq_Wang_Feng_analysis[["Baseline-Relapse"]] %>%
+  dplyr::filter(., )
+
+
+ann_colors <- list(
+    Phenotype = c(Baseline = "blue", Relapse = "red"))
+annotation_for_heatmap <- data.frame(Phenotype = Phenotype_Wang_Feng_RNAseq$Phenotype)
+rownames(annotation_for_heatmap) <- colnames(RNAseq_Wang_Feng)
+corr_spearman_Baseline_Relapse <- rcorr(as.matrix(RNAseq_Wang_Feng), type = "spearman")$r
+colnames(corr_spearman_Baseline_Relapse) <- colnames(RNAseq_Wang_Feng)
+heatmap_corr_spearman_Baseline_Relapse <- pheatmap(corr_spearman_Baseline_Relapse, 
+       color = colorRampPalette(brewer.pal(n = 9, name = "YlOrRd"))(100),
+       annotation_col = annotation_for_heatmap,
+       annotation_colors = ann_colors,
+       legend = TRUE,
+       treeheight_row = 20,
+       main = "corr_spearman_Baseline_Relapse", 
+       fontsize = 10
+       )
+
+```
+
+```{r}
+up_entrez <- Baseline_Relapse_gene_expression_analysis %>%
+  dplyr::filter(., logFC > 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+down_entrez <- Baseline_Relapse_gene_expression_analysis %>%
+  dplyr::filter(., logFC < 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+
+
+
+
+message("========================================================")
+message("[-----------------Comparison starting-------------------]")
+ego_up <- enrichGO(
+  gene = unique(up_entrez$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none"
+)
+ego_down <- enrichGO(
+  gene = unique(down_entrez$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none"
+)
+
+dotplot(ego_up, showCategory = 30)
+dotplot(ego_down, showCategory = 30)
 ```
 
