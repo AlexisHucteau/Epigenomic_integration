@@ -10,7 +10,7 @@ source("packages.R")
 
 load("../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
 load("../DATA/IDHm/Methylation/BMIQ_IDHm.RData")
-load("../DATA/BMIQ_all.RData")
+# load("../DATA/BMIQ_all.RData")
 load("../DATA/Methyl_DATA_Wang_Feng.RData")
 load("../DATA/DATA_whiele.RData")
 load("../DATA/Wang_Feng_RNAseq.RData")
