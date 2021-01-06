@@ -4,6 +4,24 @@ output: html_notebook
 ---
 
 ```{r}
+"%ni%" <- Negate("%in%")
+source("packages.R")
+```
+
+```{r}
+add_genes_annotations <- function(vector_of_genes, attribute_known) {
+  
+  # Download homo sapiens genes ensembl database
+  
+  # 
+  coordinates <- getBM(attributes = c('ensembl_gene_id', 'hgnc_symbol', 'entrezgene_id'), filters = attribute_known, values = vector_of_genes$ID, mart = ensembl)
+  genes_annoted <- merge(x = vector_of_genes, y = coordinates, by.x = "ID", by.y = attribute_known, all.x = TRUE)
+  return(genes_annoted)
+}
+```
+
+
+```{r}
 Differential_analysis <- function(Focused_variable, DATA, type_of_data = ""){
   design.pairs <- function(levels) {
     n <- length(levels)
@@ -84,8 +102,7 @@ Create_pchic_Grange <- function(pchic){
 ```{r}
 Gene_name_finding <- function(gene){
   Blueprint_gene_name <- Blueprint$gene_names %>% unique(.)
-  Illumina_gene_name <- anno$UCSC_RefGene_Name %>% strsplit(., ";") %>% unique(.)
-  gene_referenced <- c(Blueprint_gene_name, Illumina_gene_name) %>%
+  gene_referenced <- c(Blueprint_gene_name) %>%
     unlist(.) %>%
     unique(.) %>%
     .[str_detect(., gene)]
@@ -141,7 +158,8 @@ Focus_global_differencial_methylation <- function(match_hit_CpGs_Blueprint_promo
                                      DATA_methylation,
                                      comparison,
                                      fill_colour,
-                                     CpGs_DM){
+                                     CpGs_DM,
+                                     save = FALSE){
 
   CpGs_of_Interest <- Find_CpGs_of_Interest(gene_cpgs_association = match_hit_CpGs_Blueprint_promoter, cpg_annotation = Illumina_annotation_promoter)  %>%
     .[. %in% CpGs_DM]
@@ -181,7 +199,8 @@ Focus_global_differencial_methylation <- function(match_hit_CpGs_Blueprint_promo
                text_cpg = text_cpg,
                nb_sample = nb_sample,
                fill_colour = fill_colour,
-               filename = filename)
+               filename = filename,
+               save = save)
 }
 ```
 
@@ -192,32 +211,45 @@ Focus_global_methylation <- function(match_hit_CpGs_Blueprint_promoter,
                                      Phenotype,
                                      DATA_methylation,
                                      comparison,
-                                     fill_colour){
+                                     fill_colour,
+                                     Change_directory="",
+                                     save = FALSE,
+                                     CD34_DATA = FALSE){
 
   CpGs_of_Interest <- Find_CpGs_of_Interest(gene_cpgs_association = match_hit_CpGs_Blueprint_promoter, cpg_annotation = Illumina_annotation_promoter)
 
   Methylation <- Add_Betavalue_to_cpgs_of_interest(CpGs_of_Interest, DATA_methylation)
 
   nb_cpgs <- count_cpgs(Methylation)
-
+  
   Aggregated_CpGs <- Create_DATA_jitter(Methylation, Phenotype)
-
+  
   Beta_value <- Create_DATA_boxplot(Methylation, Phenotype)
+  
+  if (type(CD34_DATA) != "logical") {
+    Phenotype_CD_34 <- data.frame("Phenotype" = rep("CD34", length(colnames(CD34_DATA))))
+    CD34_methylation <- Add_Betavalue_to_cpgs_of_interest(CpGs_of_Interest, CD34_DATA)
+    print(colnames(CD34_methylation))
+    Beta_value_CD34 <- Create_DATA_boxplot(CD34_methylation, data.frame("Phenotype" = rep("CD34", length(colnames(CD34_methylation)))))
+    Beta_value <- rbind(Beta_value, Beta_value_CD34)
+    Aggregated_CpGs_CD34 <- Create_DATA_jitter(CD34_methylation, data.frame("Phenotype" = rep("CD34", length(colnames(CD34_methylation)))))
+    Aggregated_CpGs <- rbind(Aggregated_CpGs, Aggregated_CpGs_CD34)
+    Phenotype <- data.frame("Phenotype" = Phenotype$Phenotype) %>%
+      rbind(., Phenotype_CD_34)
+  }
+  
+  text_cpg <- paste0("Number of cpgs:\n", nb_cpgs)
 
-  text_cpg <- paste0("Number of cpgs\nin promoter:\n", nb_cpgs)
-
-  title <- make_title(diff = TRUE,
-                      comparison = comparison)
+  title <- "Global methylation"
 
   filename <- Create_filename(diff = TRUE,
-                      comparison = comparison)
+                      comparison = comparison, 
+                      Change_directory = Change_directory)
 
   nb_sample <- Nb_sample_function(Phenotype)
 
   nb_phenot <- length(levels(as.factor(Phenotype$Phenotype)))
 
-  text_cpg <- create_text_cpg(diff = TRUE, rownames(Methylation))
-  
   Create_graph(DATA_boxplot = Beta_value,
                DATA_jitter = Aggregated_CpGs,
                Phenotype = Phenotype,
@@ -226,7 +258,9 @@ Focus_global_methylation <- function(match_hit_CpGs_Blueprint_promoter,
                text_cpg = text_cpg,
                nb_sample = nb_sample,
                fill_colour = fill_colour,
-               filename = filename)
+               filename = filename,
+               save = save,
+               comparison = comparison)
 }
 ```
 
@@ -239,7 +273,8 @@ Focus_Gene_differential_methylation <- function(gene,
                        DATA_methylation,
                        CpGs_DM,
                        comparison,
-                       fill_colour){
+                       fill_colour,
+                       save = FALSE){
 
   CpGs_of_Interest <- Find_CpGs_of_Interest(gene, match_hit_CpGs_Blueprint_promoter, Illumina_annotation_promoter) %>%
     .[. %in% CpGs_DM]
@@ -267,6 +302,7 @@ Focus_Gene_differential_methylation <- function(gene,
   filename <- Create_filename(diff = TRUE,
                       gene = gene,
                       comparison = comparison)
+  
   nb_sample <- Nb_sample_function(Phenotype)
 
   nb_phenot <- length(levels(as.factor(Phenotype$Phenotype)))
@@ -281,7 +317,8 @@ Focus_Gene_differential_methylation <- function(gene,
                text_cpg = text_cpg,
                nb_sample = nb_sample,
                fill_colour = fill_colour,
-               filename = filename)
+               filename = filename, 
+               save = save)
 }
 ```
 
@@ -294,7 +331,8 @@ Focus_Gene_global_methylation <- function(gene,
                        DATA_methylation,
                        comparison,
                        fill_colour,
-                       Change_directory="") {
+                       Change_directory="", 
+                       save = FALSE) {
 
   CpGs_of_Interest <- Find_CpGs_of_Interest(gene, match_hit_CpGs_Blueprint_promoter, Illumina_annotation_promoter)
 
@@ -332,7 +370,8 @@ Focus_Gene_global_methylation <- function(gene,
                nb_sample = nb_sample,
                fill_colour = fill_colour,
                comparison = comparison,
-               filename = filename)
+               filename = filename,
+               save = save)
 }
 ```
 
@@ -347,7 +386,8 @@ Focus_gene_promoter_neighborhood_methylation <- function(gene,
                                              chromatin_annotation,
                                              chromatin_network, 
                                              gene_annotation,
-                                             Change_directory = "") {
+                                             Change_directory = "",
+                                             save = FALSE) {
   
   CpGs_of_Interest <- Find_CpGs_of_Interest_in_neighborhood_of_gene(gene, match_hit_CpGs_Blueprint_promoter, Illumina_annotation_promoter, chromatin_annotation, chromatin_network, gene_annotation, DATA_methylation)
   
@@ -391,11 +431,10 @@ Focus_gene_promoter_neighborhood_methylation <- function(gene,
                nb_sample = nb_sample,
                fill_colour = fill_colour,
                comparison = comparison,
-               filename = filename)
-                                             }
+               filename = filename,
+               save = save)
+}
 ```
-
-
 
 
 
@@ -539,7 +578,7 @@ create_text_cpg <- function(diff = FALSE, cpgs, gene = ""){
     if(gene != ""){
       text <- paste0(text, " in\nthe promoter\nof ", gene, ": ")
     }else{
-      text <- paste0(text, "in\npromoter: ")
+      text <- paste0(text, " in\npromoter: ")
     }
   }else{
     text <- paste0("Number of CpGs in\n")
@@ -579,7 +618,8 @@ Create_graph <- function(DATA_boxplot,
                          nb_sample,
                          fill_colour,
                          comparison=c(),
-                         filename){
+                         filename,
+                         save){
   xlim_graph_up <- nb_phenot
   if(nb_phenot==4){
     xpos_annotations <- 5.25
@@ -590,15 +630,15 @@ Create_graph <- function(DATA_boxplot,
   }else{
     xpos_annotations <- 2
   }
-  ggplot(DATA_boxplot, aes(y=Beta_values, x = Phenotype, fill = Phenotype))+
+  plot <- ggplot(DATA_boxplot, aes(y=Beta_values, x = Phenotype, fill = Phenotype))+
     geom_boxplot(alpha=0.25, outlier.size = -1)+
     geom_jitter(DATA_jitter, inherit.aes = FALSE, mapping = aes(y = Beta_values, x = Phenotype), width = 0.25, alpha = 0.5, colour = "darkred")+
     coord_cartesian(xlim = c(1, xlim_graph_up), ylim = c(0,1), clip = "off")+
     scale_fill_manual(values = fill_colour)+
     annotate("text", x = 1, y = -0.11, label = paste0("n = ", nb_sample[[1]]))+
     annotate("text", x = 2, y = -0.11, label = paste0("n = ", nb_sample[[2]]))+
-    annotate("text", x = 3, y = -0.11, label = paste0("n = ", nb_sample[[3]]))+
-    annotate("text", x = 4, y = -0.11, label = paste0("n = ", nb_sample[[4]]))+
+    #annotate("text", x = 3, y = -0.11, label = paste0("n = ", nb_sample[[3]]))+
+    #annotate("text", x = 4, y = -0.11, label = paste0("n = ", nb_sample[[4]]))+
     # annotate("text", x = 5, y = -0.11, label = paste0("n = ", nb_sample[[5]]))+
     # annotate("text", x = 6, y = -0.11, label = paste0("n = ", nb_sample[[6]]))+
     annotate("text", x = xpos_annotations, y = 0.25, label = text_cpg) +
@@ -609,25 +649,169 @@ Create_graph <- function(DATA_boxplot,
     scale_shape_manual(values=c(0,1,2,5,6,7))+
     geom_signif(comparisons = list(comparison), map_signif_level=TRUE)+  
     theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
-
-  ggsave(
-    filename = filename,
-    plot = last_plot(),
-    device = NULL,
-    path = NULL,
-    scale = 1,
-    width = NA,
-    height = NA,
-    units = c("in", "cm", "mm"),
-    dpi = 300,
-    limitsize = TRUE
-  )
+  if(save){
+    ggsave(
+      filename = filename,
+      plot = last_plot(),
+      device = NULL,
+      path = NULL,
+      scale = 1,
+      width = NA,
+      height = NA,
+      units = c("in", "cm", "mm"),
+      dpi = 300,
+      limitsize = TRUE
+    )
+  }
+  return(plot)
 }
 ```
 
 
 
 ```{r}
-Focus_high_variance_CpGs <- function(DATA_met)
+Focus_high_variance_CpGs <- function(DATA_met, percentage = 1) {
+  CpGs_variance <- rowVars(DATA_met) %>% as.data.frame(.)
+
+  colnames(CpGs_variance) <- c("Variance")
+  CpGs_variance$CpGs <- rownames(CpGs_variance)
+  
+  CpGs_variance <- CpGs_variance[order(-CpGs_variance$Variance),]
+  
+  Top_CpGs <- head(CpGs_variance, round(length(CpGs_variance[,1])*(percentage/100)))
+  
+  DATA_met_high_variance <- DATA_met %>%
+    .[Top_CpGs$CpGs,]
+  return(DATA_met_high_variance)
+}
+```
+
+
+```{r}
+Focus_low_variance_CpGs <- function(DATA_met, percentage = 1) {
+  CpGs_variance <- rowVars(DATA_met) %>% as.data.frame(.)
+
+  colnames(CpGs_variance) <- c("Variance")
+  CpGs_variance$CpGs <- rownames(CpGs_variance)
+  
+  CpGs_variance <- CpGs_variance[order(CpGs_variance$Variance),]
+  
+  Top_CpGs <- head(CpGs_variance, round(length(CpGs_variance[,1])*(percentage/100)))
+  
+  DATA_met_low_variance <- DATA_met %>%
+    .[Top_CpGs$CpGs,]
+  return(DATA_met_low_variance)
+}
+```
+
+
+```{r}
+Make_heatmap <- function(DATA, Phenotype, method = "pearson", title, annotation_color, kmeans_k = NA) {
+  annotation_for_heatmap <- data.frame(Phenotype = Phenotype$Phenotype)
+  rownames(annotation_for_heatmap) <- colnames(DATA)
+  corr <- rcorr(as.matrix(DATA), type = method)$r
+  colnames(corr) <- colnames(DATA)
+  title <- paste0(title, " ", method)
+  heatmap <- pheatmap(corr, 
+         color = colorRampPalette(brewer.pal(n = 9, name = "YlOrRd"))(100),
+         annotation_col = annotation_for_heatmap,
+         annotation_colors = annotation_color,
+         legend = TRUE,
+         treeheight_row = 20,
+         main = title, 
+         fontsize = 10
+         )
+  return(heatmap)
+}
+```
+
+
+```{r}
+Look_at_gene_with_CpGs_in_promoter <- function(list_of_cpgs, Gene_cpgs_annotation_Promoter){
+  Specific_Cpgs_gene_annotation <- Gene_cpgs_annotation_Promoter %>%
+    dplyr::filter(., CpG %in% list_of_cpgs)
+  Gene_found <- unique(Specific_Cpgs_gene_annotation$Blueprint_gene_names)
+  
+  return(Gene_found)
+}
+```
+
+
+```{r}
+Look_at_genes_connected_to_CpGs <- function(list_of_cpgs,
+                                            overlap_cpgs_pchic,
+                                            pchic,
+                                            overlap_pchic_genes_promoter, 
+                                            Gene_cpgs_annotation_Promoter) {
+  
+  Specific_CpGs_pchic_fragments <- overlap_cpgs_pchic %>%
+    dplyr::filter(., CpG %in% list_of_cpgs)
+  Pchic_of_interest <- pchic %>%
+    dplyr::filter(., IDbait %in% Specific_CpGs_pchic_fragments$ID | IDoe %in% Specific_CpGs_pchic_fragments$ID)
+  Pchic_of_interest$ID_bait <- Pchic_of_interest$IDbait
+  Pchic_of_interest$ID_oe <- Pchic_of_interest$IDoe
+  Pchic_of_interest <- dplyr::select(Pchic_of_interest, c(1:10))
+  colnames(Pchic_of_interest) <- rep(c("chr", "start", "end", "ID", "Gene_name"), 2)
+  Fragment_of_interest <- unique(rbind(Pchic_of_interest[, c(1:4)], Pchic_of_interest[, c(6:9)]))
+  overlap_pchic_genes_promoter_of_interest <- overlap_pchic_genes_promoter %>%
+    dplyr::filter(., ID %in% Fragment_of_interest$ID)
+  Gene_with_cpgs_in_prom <- Look_at_gene_with_CpGs_in_promoter(list_of_cpgs, Gene_cpgs_annotation_Promoter)
+  Genes_connected_to_CpGs_of_Interest <- overlap_pchic_genes_promoter_of_interest %>%
+    dplyr::filter(., Blueprint_gene_names %ni% Gene_with_cpgs_in_prom) %>%
+    dplyr::select(., Blueprint_gene_names) %>%
+    unique(.)
+  
+  return(Genes_connected_to_CpGs_of_Interest$Blueprint_gene_names)
+}
+```
+
+```{r}
+volcanoplot_methylation <- function(DATA, gene_association = match_hit_CpGs_Blueprint_EPIC, title){
+  enhancedvolcano_data1 <- data.frame(logFC = DATA[, "logFC"],
+                                      pvalue = DATA[, "P.Value"],
+                                      cpgs = DATA[, "ID"])
+  enhancedvolcano_data1 <- merge(x = enhancedvolcano_data1, y = gene_association, by.x = "cpgs", by.y = "CpG")
+    EnhancedVolcano(toptable = enhancedvolcano_data1, 
+                  lab = enhancedvolcano_data1$Blueprint_gene_names, 
+                  x = "logFC", 
+                  y = "pvalue",
+                  FCcutoff = 0.1,
+                  pCutoff = 0.0001,
+                  title = title,
+                  subtitle = NA,
+                  legendPosition = "right",
+                  subtitleLabSize = 0,
+                  legendLabSize = 10,
+                  ylim = c(0,10)
+  )
+}
+```
+
+```{r}
+volcanoplot_gene_expression <- function(DATA, title, xlim = 10, ylim = 5){
+  gene <- DATA[,"ID"] %>% 
+    str_split(., "[|]") %>% 
+    lapply(., function(.){.[1]}) %>% 
+    unlist(.)
+  
+  enhancedvolcano_data1 <- data.frame(logFC = DATA[, "logFC"],
+                                      pvalue = DATA[, "P.Value"],
+                                      gene = gene)
+  
+  EnhancedVolcano(toptable = enhancedvolcano_data1, 
+                lab = enhancedvolcano_data1$gene, 
+                x = "logFC", 
+                y = "pvalue",
+                FCcutoff = 2.5,
+                pCutoff = 0.01,
+                title = title,
+                subtitle = NA,
+                legendPosition = "right",
+                subtitleLabSize = 0,
+                legendLabSize = 10,
+                ylim = c(0, ylim),
+                xlim = c(-xlim, xlim)
+  )
+}
 ```
 

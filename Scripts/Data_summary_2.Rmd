@@ -1,0 +1,2176 @@
+---
+title: "Data analyses summary"
+output: html_notebook
+html_notebook:
+  toc: true
+  toc_float: true
+---
+
+
+
+# Environment preparation 
+
+## Importation data and functions
+
+BMIQ_all: TCGA methylation data with IDHm, IDHWT and CD34+
+
+BMIQ_CD34: Methylome from GSE103008, CD34+ Methylation
+
+BMIQ_Wang_Feng: Methylome from Koichi's study
+
+BMIQ_Whiele: Methylome from Whiele's study
+
+Wang_Feng_RNAseq: Gene expression from Koichi's study
+
+```{r, include=FALSE}
+source("functions.R")
+
+data(regulonlaml)
+
+```
+
+## Preparation of annotations data
+
+Loading of gene promoter annotation from Blueprint project
+
+Loading CpGs annotation from Illumina manifest
+
+Loading chromatin conformation annotation
+
+Creation of Granges object with coordinates
+
+Overlapping of the different sources of annotations
+
+```{r}
+gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT2", "PPARGC1A", "PTEN")
+
+Blueprint <- read.csv("../BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
+  dplyr::select(., "gene_names":"type", "gene_type") %>%
+  separate_rows(., gene_names, sep = " ") %>%
+  separate_rows(., gene_type, sep = " ") %>%
+  unique(.)
+
+pchic <- prepare_pchic()
+PCHiC_bed <- unique(rbind(pchic[, c(1:3, 5)], pchic[, c(6:8, 10)]))
+PCHiC_GRange <- GRanges(
+  seqnames = PCHiC_bed$chr,
+  IRanges(start = PCHiC_bed$start, end = PCHiC_bed$end),
+  Gene_Pchic = PCHiC_bed$Name,
+  start_fragment = PCHiC_bed$start,
+  end_fragment = PCHiC_bed$end
+)
+PCHiC_GRange$ID <- paste(PCHiC_bed$chr, PCHiC_bed$start, sep = "_")
+colnames(pchic) <- c("chr_bait", "start_bait", "end_bait", "ID_bait", "Name_bait", "chr_oe", "start_oe", "end_oe", "ID_oe", "Name_oe")
+pchic$IDbait <- paste(pchic$chr_bait, pchic$start_bait, sep = "_")
+pchic$IDoe <- paste(pchic$chr_oe, pchic$start_oe, sep = "_")
+
+Blueprint_Granges <- GRanges(
+    seqnames = Blueprint$chr,
+    ranges = IRanges(start = Blueprint$start, end = Blueprint$end),
+    Blueprint_gene_names = Blueprint$gene_names,
+    type = Blueprint$type,
+    gene_type = Blueprint$gene_type
+  )
+
+## ILLUMINA 450K
+anno_450 <- read.csv("~/Illumina_Manifest/HumanMethylation450_15017482_v1-2.csv", skip = 7) %>% 
+  dplyr::select(., "Name", "CHR", "MAPINFO", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_UCSC_CpG_Island") %>%
+  dplyr::filter(., CHR != "") %>%
+  separate_rows(., UCSC_RefGene_Name, UCSC_RefGene_Group, sep = ";")
+
+CpGs_Granges_450 <- GRanges(
+  seqnames = anno_450$CHR,
+  ranges = IRanges(anno_450$MAPINFO, anno_450$MAPINFO +1),
+  CpG = anno_450$Name,
+  Illumina_Gene_name = anno_450$UCSC_RefGene_Name,
+  position = anno_450$UCSC_RefGene_Group,
+  Island = anno_450$Relation_to_UCSC_CpG_Island
+)
+overlaps_CpGs_Blueprint_450 <- findOverlaps(Blueprint_Granges, CpGs_Granges_450)
+match_hit_CpGs_Blueprint_450 <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_CpGs_Blueprint_450),]),
+                                       data.frame(mcols(CpGs_Granges_450[subjectHits(overlaps_CpGs_Blueprint_450),])))
+
+match_hit_CpGs_Blueprint_promoter_450 <- dplyr::filter(match_hit_CpGs_Blueprint_450, type == "P")
+
+anno_promoter_450 <- dplyr::filter(anno_450, UCSC_RefGene_Group == "TSS1500" | UCSC_RefGene_Group == "TSS200")
+
+overlaps_CpGs_Pchic_450 <- findOverlaps(CpGs_Granges_450, PCHiC_GRange)
+matchit_CpGs_Pchic_450 <- data.frame(mcols(CpGs_Granges_450[queryHits(overlaps_CpGs_Pchic_450),]),
+                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_CpGs_Pchic_450),])))
+gene_universe_450K <- unique(match_hit_CpGs_Blueprint_promoter_450$Blueprint_gene_names)
+#########################
+## ILLUMINA EPIC
+anno_EPIC <- read.csv("~/Illumina_Manifest/infinium-methylationepic-v-1-0-b5-manifest-file.csv", skip = 7) %>% 
+  dplyr::select(., "Name", "CHR", "MAPINFO", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_UCSC_CpG_Island") %>%
+  dplyr::filter(., CHR != "") %>%
+  separate_rows(., UCSC_RefGene_Name, UCSC_RefGene_Group, sep = ";")
+
+CpGs_Granges_EPIC <- GRanges(
+  seqnames = anno_EPIC$CHR,
+  ranges = IRanges(anno_EPIC$MAPINFO, anno_EPIC$MAPINFO +1),
+  CpG = anno_EPIC$Name,
+  Illumina_Gene_name = anno_EPIC$UCSC_RefGene_Name,
+  position = anno_EPIC$UCSC_RefGene_Group,
+  Island = anno_EPIC$Relation_to_UCSC_CpG_Island
+)
+overlaps_CpGs_Blueprint_EPIC <- findOverlaps(Blueprint_Granges, CpGs_Granges_EPIC)
+match_hit_CpGs_Blueprint_EPIC <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_CpGs_Blueprint_EPIC),]),
+                                       data.frame(mcols(CpGs_Granges_EPIC[subjectHits(overlaps_CpGs_Blueprint_EPIC),])))
+
+match_hit_CpGs_Blueprint_promoter_EPIC <- dplyr::filter(match_hit_CpGs_Blueprint_EPIC, type == "P")
+
+anno_promoter_EPIC <- dplyr::filter(anno_EPIC, UCSC_RefGene_Group == "TSS1500" | UCSC_RefGene_Group == "TSS200")
+
+overlaps_CpGs_Pchic_EPIC <- findOverlaps(CpGs_Granges_EPIC, PCHiC_GRange)
+matchit_CpGs_Pchic_EPIC <- data.frame(mcols(CpGs_Granges_EPIC[queryHits(overlaps_CpGs_Pchic_EPIC),]),
+                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_CpGs_Pchic_EPIC),])))
+gene_universe_EPIC <- unique(match_hit_CpGs_Blueprint_promoter_EPIC$Blueprint_gene_names)
+##########################
+
+overlaps_Blueprint_Pchic <- findOverlaps(Blueprint_Granges, PCHiC_GRange)
+matchit_Blueprint_Pchic <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_Blueprint_Pchic),]),
+                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_Blueprint_Pchic),]))) %>%
+  dplyr::filter(., type == "P")
+
+signature <- read.csv("../DATA/BPmetCan.txt", sep = "\t")
+rownames(signature) <- signature$CpGs
+signature <- signature[,-1]
+
+```
+
+# TCGA
+Preparation of the data
+
+```{r}
+load("../DATA/CD34/Methylation/BMIQ_CD34.Rdata")
+load("../DATA/BMIQ_all.RData")
+
+Phenotype_BMIQ_CD34_IDHm_WT <- read.csv("../../TCGA_Connections/Phenotype_met.csv") %>%
+  dplyr::filter(., WT1 == "WT1WT", DNMT3A == "DNMT3AWT", TET2 == "TET2WT", FLT3 == "FLT3AWT")
+Phenotype_BMIQ_CD34_IDHm_WT$Phenotype <- ifelse(Phenotype_BMIQ_CD34_IDHm_WT$IDH == "IDHm", "IDHm", "WT")
+
+Phenotype_BMIQ_CD34_IDHm_WT <- dplyr::select(Phenotype_BMIQ_CD34_IDHm_WT, c(X, Phenotype)) %>%
+  rbind(data.frame(X = colnames(BMIQ_CD34), Phenotype = rep("CD34", 6)))
+
+Phenotype_BMIQ_CD34_IDHm_WT$X <- str_replace(Phenotype_BMIQ_CD34_IDHm_WT$X, "-", ".")
+Phenotype_BMIQ_CD34_IDHm_WT$X <- str_replace(Phenotype_BMIQ_CD34_IDHm_WT$X, "-", ".")
+
+BMIQ_CD34_IDHm_WT <- BMIQ_all %>%
+  dplyr::select(., Phenotype_BMIQ_CD34_IDHm_WT$X)
+```
+
+## Global data
+
+### Deconvolution using methylation data and BPmetCan signature
+
+```{r}
+res <- EpiDISH::epidish(as.matrix(BMIQ_CD34_IDHm_WT[,c(46:51)]), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin_CD34_DATA <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_CD34_DATA$Values <- round(deconvolution_violin_CD34_DATA$Values, 1)
+
+ggplot(deconvolution_violin_CD34_DATA, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("TCGA all sample")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+res <- epidish(as.matrix(BMIQ_CD34_IDHm_WT[,-c(46:51)]), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin_TCGA_DATA <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_TCGA_DATA$Values <- round(deconvolution_violin_TCGA_DATA$Values, 1)
+
+ggplot(deconvolution_violin_TCGA_DATA, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("TCGA all sample")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## DNA methylation state
+
+### Most variable CpGs
+
+```{r}
+BMIQ_all_high_variance <- Focus_high_variance_CpGs(BMIQ_CD34_IDHm_WT, percentage = 1)
+
+Focus_global_methylation(match_hit_CpGs_Blueprint_450, anno_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_all_high_variance, c("IDHm", "WT"), fill_colour = c("#00FF00", "#FF0000", "#0000FF", "#00FF00"))
+```
+
+### Promoter of genes of interest
+
+```{r}
+Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+
+Focus_Gene_global_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+
+Focus_Gene_global_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+
+Focus_Gene_global_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+
+Focus_Gene_global_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+
+Focus_Gene_global_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+
+Focus_Gene_global_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"))
+
+```
+
+### Neighbor of promoter of genes of interest
+
+```{r}
+Focus_gene_promoter_neighborhood_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic_450, pchic, match_hit_CpGs_Blueprint_450)
+
+Focus_gene_promoter_neighborhood_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic_450, pchic, match_hit_CpGs_Blueprint_450)
+
+Focus_gene_promoter_neighborhood_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic_450, pchic, match_hit_CpGs_Blueprint_450)
+
+Focus_gene_promoter_neighborhood_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic_450, pchic, match_hit_CpGs_Blueprint_450)
+
+Focus_gene_promoter_neighborhood_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic_450, pchic, match_hit_CpGs_Blueprint_450)
+
+Focus_gene_promoter_neighborhood_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic_450, pchic, match_hit_CpGs_Blueprint_450)
+
+Focus_gene_promoter_neighborhood_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_450, anno_promoter_450, Phenotype_BMIQ_CD34_IDHm_WT, BMIQ_CD34_IDHm_WT, c("IDHm", "WT"), c("#00FF00", "#FF0000", "#0000FF"), matchit_CpGs_Pchic_450, pchic, match_hit_CpGs_Blueprint_450)
+```
+
+## Gene Ontology
+
+### IDHm vs WT
+
+```{r}
+BMIQ_TCGA_analysis <- Differential_analysis(Phenotype_BMIQ_CD34_IDHm_WT$Phenotype, BMIQ_CD34_IDHm_WT)
+
+Response_diff_hypermet_in_IDHm <- BMIQ_TCGA_analysis[["IDHm-WT"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_WT <- BMIQ_TCGA_analysis[["IDHm-WT"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_IDHm <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_IDHm$ID, match_hit_CpGs_Blueprint_promoter_450)
+
+Genes_hypermetylated_in_IDHm_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_IDHm$ID,
+                                                                                  matchit_CpGs_Pchic_450, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_450)
+
+Genes_hypermetylated_in_WT <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_WT$ID, match_hit_CpGs_Blueprint_promoter_450)
+
+Genes_hypermetylated_in_WT_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_WT$ID,
+                                                                                  matchit_CpGs_Pchic_450, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_450)
+
+Genes_hypermetylated_in_IDHm_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_IDHm,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+
+Genes_hypermetylated_in_IDHm_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_IDHm_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+
+Genes_hypermetylated_in_WT_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_WT,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+
+Genes_hypermetylated_in_WT_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_WT_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+
+Genes_hypermetylated_in_IDHm_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_IDHm, Genes_hypermetylated_in_IDHm_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+
+Genes_hypermetylated_in_WT_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_WT, Genes_hypermetylated_in_WT_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+```
+
+
+```{r}
+dotplot(Genes_hypermetylated_in_IDHm_ego, showCategory = 30, title = "Hypermet IDHm", font.size = 6)
+dotplot(Genes_hypermetylated_in_IDHm_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood IDHm", font.size = 9)
+dotplot(Genes_hypermetylated_in_IDHm_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer IDHm", font.size = 9)
+dotplot(Genes_hypermetylated_in_WT_ego, showCategory = 30, title = "Hypermet WT", font.size = 9)
+dotplot(Genes_hypermetylated_in_WT_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood WT", font.size = 9)
+dotplot(Genes_hypermetylated_in_WT_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer WT", font.size = 9)
+```
+
+## Volcano plots
+
+### IDHm vs IDH WT
+
+```{r}
+volcanoplot_methylation(BMIQ_TCGA_analysis[["IDHm-WT"]], match_hit_CpGs_Blueprint_450, "IDHm vs WT")
+```
+
+### IDHm vs CD34
+
+```{r}
+volcanoplot_methylation(BMIQ_TCGA_analysis[["CD34-IDHm"]], match_hit_CpGs_Blueprint_450, "CD34 vs IDHm")
+```
+
+# Whiele's DATA
+
+## Global data
+
+### Principal Component Analysis
+
+```{r}
+load("../DATA/DATA_whiele.RData")
+
+DATA_for_PCA <- t(as.data.frame(BMIQ_Whiele))
+res.pca <- PCA(DATA_for_PCA, ncp = 3, graph = TRUE)
+
+fviz_eig(res.pca, addlabels = TRUE)
+```
+
+### Clustering
+
+```{r}
+BMIQ_Whiele_high_variance <- Focus_high_variance_CpGs(BMIQ_Whiele, percentage = 1)
+
+Phenotype_Whiele$Phenotype <- ifelse(Phenotype_Whiele$Phenotype == "WT+2HG", "WTHG", Phenotype_Whiele$Phenotype)
+
+ann_color <- list(
+    Phenotype = c(IDH2m = "red", WT = "blue", Control = "grey", WTHG = "green"))
+
+Make_heatmap(BMIQ_Whiele, Phenotype_Whiele, "pearson", "All values", ann_color)
+
+Make_heatmap(BMIQ_Whiele_high_variance, Phenotype_Whiele, "pearson", "High variance", ann_color)
+```
+
+### Deconvolution
+
+```{r}
+res <- epidish(as.matrix(BMIQ_Whiele), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin_Whiele_DATA <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Whiele_DATA$Values <- round(deconvolution_violin_Whiele_DATA$Values, 1)
+
+ggplot(deconvolution_violin_Whiele_DATA, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("All the sample")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## DNA methylation state
+
+### Most variable CpGs
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Whiele, BMIQ_Whiele_high_variance, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+```
+
+### Promoter of genes of interest
+
+```{r}
+Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+
+Focus_Gene_global_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+
+Focus_Gene_global_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+
+Focus_Gene_global_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+
+Focus_Gene_global_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+
+Focus_Gene_global_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+
+Focus_Gene_global_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"))
+
+```
+
+### Neighbor of promoter of genes of interest
+
+```{r}
+Focus_gene_promoter_neighborhood_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Whiele, BMIQ_Whiele, c("IDH2m", "WT"), c("#555555", "#FF0000", "#0000FF", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+```
+
+## Gene Ontology
+
+### IDH2 vs WT
+
+```{r}
+BMIQ_Whiele_analysis <- Differential_analysis(Phenotype_Whiele$Phenotype, BMIQ_Whiele)
+
+Response_diff_hypermet_in_IDH2m <- BMIQ_Whiele_analysis[["IDH2m-WT"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_WT_whiele <- BMIQ_Whiele_analysis[["IDH2m-WT"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_IDH2m <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_IDH2m$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_IDH2m_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_IDH2m$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_WT_whiele <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_WT_whiele$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_WT_enhancer_whiele <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_WT_whiele$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_IDH2m_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_IDH2m,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_IDH2m_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_IDH2m_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_whiele_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_WT_whiele,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_enhancer_ego_whiele <- enrichGO(
+  gene = Genes_hypermetylated_in_WT_enhancer_whiele,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_IDH2m_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_IDH2m, Genes_hypermetylated_in_IDH2m_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_promoter_and_enhancer_ego_whiele <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_WT_whiele, Genes_hypermetylated_in_WT_enhancer_whiele)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+dotplot(Genes_hypermetylated_in_IDH2m_ego, showCategory = 30, title = "Hypermet IDHm")
+dotplot(Genes_hypermetylated_in_IDH2m_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood IDHm", font.size = 9)
+dotplot(Genes_hypermetylated_in_IDH2m_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer IDHm")
+dotplot(Genes_hypermetylated_in_WT_whiele_ego, showCategory = 30, title = "Hypermet WT")
+dotplot(Genes_hypermetylated_in_WT_enhancer_ego_whiele, showCategory = 30, title = "Hypermet Neighborhood WT", font.size = 9)
+dotplot(Genes_hypermetylated_in_WT_promoter_and_enhancer_ego_whiele, showCategory = 30, title = "Prom & enhancer WT")
+```
+
+## Volcano plots
+
+### IDH2 vs WT
+
+```{r}
+volcanoplot_methylation(BMIQ_Whiele_analysis[["IDH2m-WT"]], match_hit_CpGs_Blueprint_EPIC, "IDH2m vs WT")
+```
+
+
+
+
+# Koichi's data Analyses
+
+## Global data
+
+### Principal Component Analysis
+
+```{r}
+load("../DATA/Methyl_DATA_Wang_Feng.RData")
+Phenotype_cluster <- read.csv("../DATA/Wang_Feng_DATA/Clustering_Baseline_phenotype.csv")
+
+DATA_for_PCA <- t(as.data.frame(BMIQ_Wang_Feng))
+res.pca <- PCA(DATA_for_PCA, ncp = 3, graph = TRUE)
+
+fviz_eig(res.pca, addlabels = TRUE)
+```
+
+### Clustering
+
+#### All samples
+
+```{r}
+BMIQ_Wang_Feng_high_variance <- Focus_high_variance_CpGs(BMIQ_Wang_Feng, percentage = 1)
+
+
+Phenotype_Wang_Feng <- merge(Phenotype_Wang_Feng, Phenotype_cluster, by.x = "Sample", by.y = "UPN", all.x = TRUE)
+Phenotype_Wang_Feng$Phenotype <- ifelse(Phenotype_Wang_Feng$Phenotype == "Baseline", Phenotype_Wang_Feng$Cluster, Phenotype_Wang_Feng$Phenotype)
+
+ann_color <- list(
+    Phenotype = c(cluster1 = "green", cluster2 = "red", Non_Responder = "darkred", Responder = "darkgreen", Control = "grey"))
+
+Make_heatmap(BMIQ_Wang_Feng, Phenotype_Wang_Feng, "pearson", "All values", ann_color)
+
+Make_heatmap(BMIQ_Wang_Feng_high_variance, Phenotype_Wang_Feng, "pearson", "High variance", ann_color)
+```
+
+#### Control/Baseline and Responder/Non-responder 
+
+```{r}
+Phenotype_Wang_Feng_Control_Baseline <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "cluster1" | Phenotype == "cluster2" | Phenotype == "Control")
+  
+BMIQ_Control_Baseline <- dplyr::select(BMIQ_Wang_Feng, Phenotype_Wang_Feng_Control_Baseline$Sample_number)
+
+BMIQ_Control_Baseline_high_variance <- Focus_high_variance_CpGs(BMIQ_Control_Baseline, 1)
+
+Phenotype_Wang_Feng_Responder_Non_Responder <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype != "cluster1" & Phenotype != "cluster2" & Phenotype != "Control")
+
+BMIQ_Responder_Non_Responder <- dplyr::select(BMIQ_Wang_Feng, Phenotype_Wang_Feng_Responder_Non_Responder$Sample_number)
+
+BMIQ_Responder_Non_Responder_high_variance <- Focus_high_variance_CpGs(BMIQ_Responder_Non_Responder, 1)
+
+Make_heatmap(BMIQ_Control_Baseline, Phenotype_Wang_Feng_Control_Baseline, "pearson", "Control vs Baseline", ann_color)
+
+Make_heatmap(BMIQ_Control_Baseline_high_variance, Phenotype_Wang_Feng_Control_Baseline, "pearson", "Control vs Baseline High variance", ann_color)
+
+Make_heatmap(BMIQ_Responder_Non_Responder, Phenotype_Wang_Feng_Responder_Non_Responder, "pearson", "Responder vs Non-Responder", ann_color)
+
+Make_heatmap(BMIQ_Responder_Non_Responder_high_variance, Phenotype_Wang_Feng_Responder_Non_Responder, "pearson", "Responder vs Non-Responder High variance", ann_color)
+```
+
+#### Baseline
+
+```{r}
+Phenotype_Wang_Feng_Baseline <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "cluster1" | Phenotype == "cluster2")
+  
+BMIQ_Baseline <- dplyr::select(BMIQ_Wang_Feng, Phenotype_Wang_Feng_Baseline$Sample_number)
+
+BMIQ_Baseline_high_variance <- Focus_high_variance_CpGs(BMIQ_Baseline, 1)
+
+CpGs_promoter <- match_hit_CpGs_Blueprint_promoter_EPIC$CpG %>%
+  unique(.) %>%
+  .[. %in% rownames(BMIQ_Baseline)]
+
+BMIQ_Baseline_promoter <- BMIQ_Baseline[CpGs_promoter,]
+
+BMIQ_Baseline_high_variance_promoter <- Focus_high_variance_CpGs(BMIQ_Baseline_promoter, 1)
+
+ann_color <- list(
+    Phenotype = c(cluster1 = "blue", cluster2 = "red"))
+
+Make_heatmap(BMIQ_Baseline, Phenotype_Wang_Feng_Baseline, "pearson", "Baseline", ann_color)
+
+Make_heatmap(BMIQ_Baseline_high_variance, Phenotype_Wang_Feng_Baseline, "pearson", "Baseline High variance", ann_color)
+
+Make_heatmap(BMIQ_Baseline_promoter, Phenotype_Wang_Feng_Baseline, "spearman", "Baseline promoter", ann_color)
+```
+
+Comparing clustering
+
+```{r}
+method = "spearman"
+
+Phenotype_Wang_Feng_Baseline <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "cluster1" | Phenotype == "cluster2")
+
+heatmap_Koichi_clustering <- Make_heatmap(BMIQ_Baseline_high_variance_promoter, Phenotype_Wang_Feng_Baseline, method, "Baseline High variance promoter", ann_color, cuttree = 2)
+heatmap_Koichi_clustering
+Phenotype_Wang_Feng_Baseline <- cbind(Phenotype_Wang_Feng_Baseline, A_cluster = cutree(heatmap_Koichi_clustering$tree_col, k = 2))
+
+Phenotype_Wang_Feng_Baseline <- merge(Phenotype_Wang_Feng_Baseline, Phenotype_Wang_Feng[Phenotype_Wang_Feng$Phenotype != "cluster1" & Phenotype_Wang_Feng$Phenotype != "cluster2" ,c(1,3)], by.x = "Sample", by.y = "Sample", all.x = TRUE)
+
+ann_colors <- list(
+    W_Cluster = c(cluster1 = "blue", cluster2 = "red4"),
+    A_Cluster = c(cluster1 = "blue", cluster2 = "red4"),
+    Response = c(Responder = "blue", Non_Responder = "red")
+)
+
+Phenotype_Wang_Feng_Baseline <- Phenotype_Wang_Feng_Baseline[,-3]
+colnames(Phenotype_Wang_Feng_Baseline) <- c("Sample", "Sample_number", "Phenotype", "A_cluster", "Response")
+
+annotation_for_heatmap <- data.frame(W_Cluster = Phenotype_Wang_Feng_Baseline$Phenotype, A_Cluster = Phenotype_Wang_Feng_Baseline$A_cluster, Response = Phenotype_Wang_Feng_Baseline$Response)
+rownames(annotation_for_heatmap) <- colnames(BMIQ_Baseline_high_variance_promoter)
+corr <- rcorr(as.matrix(BMIQ_Baseline_high_variance_promoter), type = method)$r
+colnames(corr) <- colnames(BMIQ_Baseline_high_variance_promoter)
+heatmap <- pheatmap(corr, 
+                      color = colorRampPalette(brewer.pal(n = 9, name = "YlOrRd"))(100),
+                      annotation_col = annotation_for_heatmap,
+                      annotation_colors = ann_colors,
+                      legend = TRUE,
+                      treeheight_row = 20,
+                      main = "Difference clustering", 
+                      fontsize = 10,
+                      cutree_cols = 2
+)
+
+```
+
+### Deconvolution
+
+```{r}
+signature <- read.csv("../DATA/BPmetCan.txt", sep = "\t")
+rownames(signature) <- signature$CpGs
+signature <- signature[,-1]
+
+res <- epidish(as.matrix(BMIQ_Wang_Feng), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin_Koichi_Data <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Koichi_Data$Values <- round(deconvolution_violin_Koichi_Data$Values, 1)
+
+Baseline_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "cluster1" | .$Phenotype == "cluster2", "Sample_number"]
+
+res_Baseline <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Baseline_sample)), as.matrix(signature), method = "RPC")
+Fres_Baseline <- as.data.frame(res_Baseline$estF)
+Fres_Baseline <- cbind(Sample = rownames(Fres_Baseline), Fres_Baseline)
+Fres_Baseline[, -1] <- round(Fres_Baseline[, -1], 3)
+
+deconvolution_violin_Baseline <- data.frame(Cell_Type = rep(colnames(Fres_Baseline[,c(2:12)]), each = length(rownames(Fres_Baseline))),
+                          Values = Fres_Baseline[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Baseline$Values <- round(deconvolution_violin_Baseline$Values, 1)
+
+Responder_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "Responder", "Sample_number"]
+
+res_Responder <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Responder_sample)), as.matrix(signature), method = "RPC")
+Fres_Responder <- as.data.frame(res_Responder$estF)
+Fres_Responder <- cbind(Sample = rownames(Fres_Responder), Fres_Responder)
+Fres_Responder[, -1] <- round(Fres_Responder[, -1], 3)
+
+deconvolution_violin_Responder <- data.frame(Cell_Type = rep(colnames(Fres_Responder[,c(2:12)]), each = length(rownames(Fres_Responder))),
+                          Values = Fres_Responder[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Responder$Values <- round(deconvolution_violin_Responder$Values, 1)
+
+Non_Responder_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "Non_Responder", "Sample_number"]
+
+res_Non_Responder <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Non_Responder_sample)), as.matrix(signature), method = "RPC")
+Fres_Non_Responder <- as.data.frame(res_Non_Responder$estF)
+Fres_Non_Responder <- cbind(Sample = rownames(Fres_Non_Responder), Fres_Non_Responder)
+Fres_Non_Responder[, -1] <- round(Fres_Non_Responder[, -1], 3)
+
+deconvolution_violin_Non_Responder <- data.frame(Cell_Type = rep(colnames(Fres_Non_Responder[,c(2:12)]), each = length(rownames(Fres_Non_Responder))),
+                          Values = Fres_Non_Responder[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Non_Responder$Values <- round(deconvolution_violin_Non_Responder$Values, 1)
+
+Control_sample <- Phenotype_Wang_Feng %>% 
+  .[.$Phenotype == "Control", "Sample_number"]
+
+res_Control <- epidish(as.matrix(BMIQ_Wang_Feng %>%
+                                    dplyr::select(., Control_sample)), as.matrix(signature), method = "RPC")
+Fres_Control <- as.data.frame(res_Control$estF)
+Fres_Control <- cbind(Sample = rownames(Fres_Control), Fres_Control)
+Fres_Control[, -1] <- round(Fres_Control[, -1], 3)
+
+deconvolution_violin_Control <- data.frame(Cell_Type = rep(colnames(Fres_Control[,c(2:12)]), each = length(rownames(Fres_Control))),
+                          Values = Fres_Control[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Control$Values <- round(deconvolution_violin_Control$Values, 1)
+
+ggplot(deconvolution_violin_Koichi_Data, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("All the sample")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(deconvolution_violin_Baseline, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("Baseline")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(deconvolution_violin_Responder, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("Responder")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(deconvolution_violin_Non_Responder, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("Non_Responder")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(deconvolution_violin_Control, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("Control")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+### Most variable CpGs
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng_high_variance, c("cluster2", "Control"), c("#0000FF", "#FF0000", "#555555", "#FF0000", "#0000FF"))
+```
+
+## **Baseline Cluster1 vs Cluster2**
+
+### Most variable CpGs
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline_high_variance, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+```
+
+### Promoter of genes of interest
+
+```{r}
+Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+```
+
+### Neighbor of promoter of genes of interest
+
+```{r}
+Focus_gene_promoter_neighborhood_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng_Baseline, BMIQ_Baseline, c("cluster1", "cluster2"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+```
+
+### Gene ontology
+
+```{r}
+BMIQ_Baseline_analysis <- Differential_analysis(Phenotype_Wang_Feng_Baseline$Phenotype, BMIQ_Baseline)
+
+Response_diff_hypermet_in_Cluster1 <- BMIQ_Baseline_analysis[["cluster1-cluster2"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_Cluster2 <- BMIQ_Baseline_analysis[["cluster1-cluster2"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_Cluster1 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Cluster1$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Cluster1_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Cluster1$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Cluster2 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Cluster2$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Cluster2_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Cluster2$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Cluster1_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Cluster1,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Cluster1_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Cluster1_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Cluster2_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Cluster2,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Cluster2_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Cluster2_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Cluster1_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Cluster1, Genes_hypermetylated_in_Cluster1_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Cluster2_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Cluster2, Genes_hypermetylated_in_Cluster2_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+```{r}
+#dotplot(Genes_hypermetylated_in_Cluster1_ego, showCategory = 30, title = "Hypermet C1")
+dotplot(Genes_hypermetylated_in_Cluster1_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood C1", font.size = 9)
+dotplot(Genes_hypermetylated_in_Cluster1_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer C1", font.size = 9)
+dotplot(Genes_hypermetylated_in_Cluster2_ego, showCategory = 30, title = "Hypermet C2", font.size = 9)
+dotplot(Genes_hypermetylated_in_Cluster2_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood C2", font.size = 9)
+dotplot(Genes_hypermetylated_in_Cluster2_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer C2", font.size = 9)
+```
+
+
+```{r}
+write.csv(Genes_hypermetylated_in_Cluster1_enhancer_ego@result, file = "../Results/Wang_Feng_Results/C1_enh_hypermet.csv")
+write.csv(Genes_hypermetylated_in_Cluster2_ego@result, file = "../Results/Wang_Feng_Results/C2_hypermet.csv")
+write.csv(Genes_hypermetylated_in_Cluster2_enhancer_ego@result, file = "../Results/Wang_Feng_Results/C2_enh_hypermet.csv")
+```
+
+### Volcano plot
+
+```{r}
+volcanoplot_methylation(BMIQ_Baseline_analysis[["cluster1-cluster2"]], match_hit_CpGs_Blueprint_EPIC, "Cluster1 vs Cluster2")
+```
+
+## **Baseline Cluster1 vs Responder**
+
+### Most variable CpGs
+
+```{r}
+cluster1_sample <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "cluster1") %>%
+  .$Sample_number
+
+BMIQ_cluster1 <- BMIQ_Baseline %>%
+  dplyr::select(., cluster1_sample)
+
+Responder_sample <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "Responder") %>%
+  .$Sample_number
+
+BMIQ_Responder <- BMIQ_Wang_Feng %>%
+  dplyr::select(., Responder_sample)
+
+BMIQ_cluster1_Responder <- cbind(BMIQ_cluster1, BMIQ_Responder)
+
+Phenotype_Responder_cluster1 <- data.frame("Sample" = c(cluster1_sample, Responder_sample), "Phenotype" = c(rep("cluster1", length(cluster1_sample)), rep("Responder", length(Responder_sample))))
+
+BMIQ_cluster1_Responder_high_variance <- Focus_high_variance_CpGs(BMIQ_cluster1_Responder)
+
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Responder_cluster1, BMIQ_cluster1_Responder_high_variance, c("cluster1", "Responder"), c("#0000FF", "#00FF00", "#FF0000", "#00FF00"))
+```
+
+### Gene ontology
+
+```{r}
+BMIQ_Baseline_cluster1_Responder_analysis <- Differential_analysis(Phenotype_Responder_cluster1$Phenotype, BMIQ_cluster1_Responder)
+
+Response_diff_hypermet_in_Cluster1_vs_Responder <- BMIQ_Baseline_cluster1_Responder_analysis[["cluster1-Responder"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_Responder_vs_Cluster1 <- BMIQ_Baseline_cluster1_Responder_analysis[["cluster1-Responder"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_Cluster1_vs_Responder <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Cluster1_vs_Responder$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Cluster1_vs_Responder_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Cluster1_vs_Responder$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Responder_vs_Cluster1 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Responder_vs_Cluster1$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Responder_vs_Cluster1_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Responder_vs_Cluster1$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Cluster1_vs_Responder_ego <- enrichGO(
+  gene = Response_diff_hypermet_in_Cluster1_vs_Responder,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Cluster1_vs_Responder_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Cluster1_vs_Responder_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Responder_vs_Cluster1_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Responder_vs_Cluster1,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Responder_vs_Cluster1_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Responder_vs_Cluster1_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Cluster1_vs_Responder_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Response_diff_hypermet_in_Cluster1_vs_Responder, Genes_hypermetylated_in_Cluster1_vs_Responder_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Responder_vs_Cluster1_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Responder_vs_Cluster1, Genes_hypermetylated_in_Responder_vs_Cluster1_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+
+```{r}
+#dotplot(Genes_hypermetylated_in_Cluster1_vs_Responder_ego, showCategory = 30, title = "Hypermet C1")
+dotplot(Genes_hypermetylated_in_Cluster1_vs_Responder_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood C1", font.size = 9)
+#dotplot(Genes_hypermetylated_in_Cluster1_vs_Responder_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer C1", font.size = 9)
+dotplot(Genes_hypermetylated_in_Responder_vs_Cluster1_ego, showCategory = 30, title = "Hypermet RES", font.size = 6)
+dotplot(Genes_hypermetylated_in_Responder_vs_Cluster1_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood RES", font.size = 9)
+dotplot(Genes_hypermetylated_in_Responder_vs_Cluster1_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer RES")
+```
+
+```{r}
+write.csv(Genes_hypermetylated_in_Cluster1_vs_Responder_enhancer_ego@result, file = "../Results/Wang_Feng_Results/C1_res_enh_hypermet.csv")
+write.csv(Genes_hypermetylated_in_Responder_vs_Cluster1_ego@result, file = "../Results/Wang_Feng_Results/res_c1_hypermet.csv")
+write.csv(Genes_hypermetylated_in_Responder_vs_Cluster1_enhancer_ego@result, file = "../Results/Wang_Feng_Results/res_c1_enh_hypermet.csv")
+
+```
+
+### Volcano plot
+
+```{r}
+volcanoplot_methylation(BMIQ_Baseline_cluster1_Responder_analysis[["cluster1-Responder"]], match_hit_CpGs_Blueprint_EPIC, "Cluster1 vs Responder")
+```
+
+
+## **Baseline Cluster2 vs Non-Responder**
+
+### Most variable CpGs
+
+```{r}
+cluster2_sample <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "cluster2") %>%
+  .$Sample_number
+
+BMIQ_cluster2 <- BMIQ_Baseline %>%
+  dplyr::select(., cluster2_sample)
+
+Non_Responder_sample <- Phenotype_Wang_Feng %>%
+  dplyr::filter(., Phenotype == "Non_Responder") %>%
+  .$Sample_number
+
+BMIQ_Non_Responder <- BMIQ_Wang_Feng %>%
+  dplyr::select(., Non_Responder_sample)
+
+BMIQ_cluster2_Non_Responder <- cbind(BMIQ_cluster2, BMIQ_Non_Responder)
+
+Phenotype_Non_Responder_cluster2 <- data.frame("Sample" = c(cluster2_sample, Non_Responder_sample), "Phenotype" = c(rep("cluster2", length(cluster2_sample)), rep("Non_Responder", length(Non_Responder_sample))))
+
+BMIQ_cluster2_Non_Responder_high_variance <- Focus_high_variance_CpGs(BMIQ_cluster2_Non_Responder)
+
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Non_Responder_cluster2, BMIQ_cluster2_Non_Responder_high_variance, c("cluster2", "Non_Responder"), c("#0000FF", "#FF0000", "#FF0000", "#00FF00"))
+```
+
+### Gene ontology
+
+```{r}
+BMIQ_Baseline_cluster2_Non_Responder_analysis <- Differential_analysis(Phenotype_Non_Responder_cluster2$Phenotype, BMIQ_cluster2_Non_Responder)
+
+Response_diff_hypermet_in_cluster2_vs_Non_Responder <- BMIQ_Baseline_cluster2_Non_Responder_analysis[["cluster2-Non_Responder"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_Non_Responder_vs_cluster2 <- BMIQ_Baseline_cluster2_Non_Responder_analysis[["cluster2-Non_Responder"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_cluster2_vs_Non_Responder <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_cluster2_vs_Non_Responder$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_cluster2_vs_Non_Responder_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_cluster2_vs_Non_Responder$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Non_Responder_vs_cluster2 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Non_Responder_vs_cluster2$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Non_Responder_vs_cluster2_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Non_Responder_vs_cluster2$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_cluster2_vs_Non_Responder_ego <- enrichGO(
+  gene = Response_diff_hypermet_in_cluster2_vs_Non_Responder,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_cluster2_vs_Non_Responder_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_cluster2_vs_Non_Responder_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Non_Responder_vs_cluster2_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Non_Responder_vs_cluster2,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Non_Responder_vs_cluster2_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Non_Responder_vs_cluster2_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_cluster2_vs_Non_Responder_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Response_diff_hypermet_in_cluster2_vs_Non_Responder, Genes_hypermetylated_in_cluster2_vs_Non_Responder_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Non_Responder_vs_cluster2_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Non_Responder_vs_cluster2, Genes_hypermetylated_in_Non_Responder_vs_cluster2_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+
+```{r}
+#dotplot(Genes_hypermetylated_in_cluster2_vs_Non_Responder_ego, showCategory = 30, title = "Hypermet C2")
+dotplot(Genes_hypermetylated_in_cluster2_vs_Non_Responder_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood C2")
+#○dotplot(Genes_hypermetylated_in_cluster2_vs_Non_Responder_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer C2")
+dotplot(Genes_hypermetylated_in_Non_Responder_vs_cluster2_ego, showCategory = 30, title = "Hypermet NR")
+dotplot(Genes_hypermetylated_in_Non_Responder_vs_cluster2_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood NR")
+dotplot(Genes_hypermetylated_in_Non_Responder_vs_cluster2_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer NR", font.size = 9)
+
+```
+
+### Volcano plot
+
+```{r}
+volcanoplot_methylation(BMIQ_Baseline_cluster2_Non_Responder_analysis[["cluster2-Non_Responder"]], match_hit_CpGs_Blueprint_EPIC, "Cluster2 vs Non Responder")
+```
+
+
+## **Non-Responder vs Responder**
+
+### Promoter of genes of interest
+
+```{r}
+Focus_Gene_global_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"))
+
+Focus_Gene_global_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"))
+
+```
+
+### Non-Responder vs Responder
+
+```{r}
+Focus_gene_promoter_neighborhood_methylation("CEBPA", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("CPT1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("CPT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("SLC25A20", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("PPARGC1A", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Non-Responder", "Responder"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("AKT2", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Baseline", "Control"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+
+Focus_gene_promoter_neighborhood_methylation("PTEN", match_hit_CpGs_Blueprint_promoter_EPIC, anno_promoter_EPIC, Phenotype_Wang_Feng, BMIQ_Wang_Feng, c("Baseline", "Control"), c("#0000FF", "#555555", "#FF0000", "#00FF00"), matchit_CpGs_Pchic_EPIC, pchic, match_hit_CpGs_Blueprint_EPIC)
+```
+
+### Gene Ontology
+
+```{r}
+BMIQ_wang_feng_analysis <- Differential_analysis(Phenotype_Wang_Feng$Phenotype, BMIQ_Wang_Feng)
+
+Response_diff_hypermet_in_Non_Responder <- BMIQ_wang_feng_analysis[["Non_Responder-Responder"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_Responder <- BMIQ_wang_feng_analysis[["Non_Responder-Responder"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_Non_responder <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Non_Responder$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Non_responder_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Non_Responder$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Response_diff_hypermet_in_Baseline <- BMIQ_wang_feng_analysis[["Baseline-Control"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_Control <- BMIQ_wang_feng_analysis[["Baseline-Control"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+
+Genes_hypermetylated_in_Baseline <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Baseline$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Baseline_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Control$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Non_responder_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Non_responder,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Non_responder_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Non_responder_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Baseline_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Baseline,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Baseline_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Baseline_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Non_responder_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Non_responder, Genes_hypermetylated_in_Non_responder_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Baseline_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Baseline, Genes_hypermetylated_in_Baseline_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+
+```{r}
+dotplot(Genes_hypermetylated_in_Non_responder_ego, showCategory = 30, title = "Hypermet NR")
+dotplot(Genes_hypermetylated_in_Non_responder_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood NR")
+dotplot(Genes_hypermetylated_in_Non_responder_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer NR")
+dotplot(Genes_hypermetylated_in_Baseline_ego, showCategory = 30, title = "Hypermet Baseline")
+dotplot(Genes_hypermetylated_in_Baseline_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood Baseline")
+dotplot(Genes_hypermetylated_in_Baseline_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer Baseline")
+
+
+```
+
+### Volcano plots
+
+```{r}
+volcanoplot_methylation(BMIQ_wang_feng_analysis[["Non_Responder-Responder"]], match_hit_CpGs_Blueprint_EPIC, "Non_Responder vs Responder")
+```
+
+## **Baseline vs Control and Non-Responder vs Responder**
+
+```{r}
+Genes_HM_Baseline_Non_Responder <- unique(intersect(Genes_hypermetylated_in_Non_responder, Genes_hypermetylated_in_Baseline))
+
+Genes_HM_Baseline_Non_Responder_enhancer <- unique(intersect(Genes_hypermetylated_in_Non_responder_enhancer, Genes_hypermetylated_in_Baseline_enhancer))
+
+Genes_HM_Baseline_Non_Responder_Prom_enhancer <- unique(c(Genes_HM_Baseline_Non_Responder, Genes_HM_Baseline_Non_Responder_enhancer))
+
+Genes_HM_Baseline_Non_Responder_ego <- enrichGO(
+  gene = Genes_HM_Baseline_Non_Responder,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_HM_Baseline_Non_Responder_enhancer_ego <- enrichGO(
+  gene = Genes_HM_Baseline_Non_Responder_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_HM_Baseline_Non_Responder_Prom_enhancer_ego <- enrichGO(
+  gene = Genes_HM_Baseline_Non_Responder_Prom_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+
+```{r}
+dotplot(Genes_HM_Baseline_Non_Responder_ego, showCategory = 30, title = "Hypermet Base&NR")
+dotplot(Genes_HM_Baseline_Non_Responder_enhancer_ego, showCategory = 30, title = "Hypermet enhancer Base&NR")
+dotplot(Genes_HM_Baseline_Non_Responder_Prom_enhancer_ego, showCategory = 30, title = "Hypermet prom/enhancer Base&NR")
+
+```
+
+# Gene expression
+
+## Global data
+
+### Heatmaps
+
+#### Baseline vs Relapse
+
+```{r}
+load("../DATA/Wang_Feng_RNAseq.RData")
+
+ann_color_RNA <- list(
+    Phenotype = c(Baseline = "blue", Relapse = "red"))
+
+Make_heatmap(RNAseq_Wang_Feng, Phenotype_Wang_Feng_RNAseq, "pearson", "Baseline & Relapse", ann_color_RNA)
+
+Make_heatmap(RNAseq_Wang_Feng, Phenotype_Wang_Feng_RNAseq, "spearman", "Baseline & Relapse", ann_color_RNA)
+
+```
+
+### Baseline Cluster 1 vs Cluster 2
+
+```{r}
+Phenotype_cluster <- read.csv("../DATA/Wang_Feng_DATA/Clustering_Baseline_phenotype.csv")
+
+Phenotype_Wang_Feng_RNAseq_clustered <- Phenotype_Wang_Feng_RNAseq
+
+Phenotype_Wang_Feng_RNAseq_clustered <- dplyr::filter(Phenotype_Wang_Feng_RNAseq_clustered, Phenotype == "Baseline")
+
+Phenotype_Wang_Feng_RNAseq_clustered$Sample_name_bis <- Phenotype_Wang_Feng_RNAseq_clustered$Sample %>%
+  str_split(., "_") %>%
+  lapply(., function(.){.[1]}) %>%
+  unlist(.)
+
+Phenotype_Wang_Feng_RNAseq_clustered <- merge(Phenotype_Wang_Feng_RNAseq_clustered, Phenotype_cluster, by.x = "Sample_name_bis", by.y = "UPN", all.x = TRUE, sort = FALSE) %>%
+  na.omit(.)
+
+Phenotype_Wang_Feng_RNAseq_clustered$Phenotype <- Phenotype_Wang_Feng_RNAseq_clustered$Cluster
+
+RNAseq_Wang_Feng_Baseline <- RNAseq_Wang_Feng %>%
+  dplyr::select(., Phenotype_Wang_Feng_RNAseq_clustered$Sample)
+
+RNAseq_Wang_Feng_Baseline_analysis <- Differential_analysis(Phenotype_Wang_Feng_RNAseq_clustered$Phenotype, RNAseq_Wang_Feng_Baseline)
+
+ann_color_RNA_baseline <- list(
+    Phenotype = c(cluster1 = "blue", cluster2 = "red"))
+
+Make_heatmap(RNAseq_Wang_Feng_Baseline, Phenotype_Wang_Feng_RNAseq_clustered, "pearson", "cluster1 & cluster2", ann_color_RNA_baseline)
+
+Make_heatmap(RNAseq_Wang_Feng_Baseline, Phenotype_Wang_Feng_RNAseq_clustered, "spearman", "cluster1 & cluster2", ann_color_RNA_baseline)
+```
+
+## Gene ontology
+
+### Baseline vs Relapse
+
+```{r}
+gene_universe_RNAseq_Wang_Feng <- rownames(RNAseq_Wang_Feng) %>% 
+  str_split(., "[|]") %>%
+  unlist(.) %>%
+  .[grep("[A-Za-z]", .)]
+
+RNAseq_Wang_Feng_analysis <- Differential_analysis(Phenotype_Wang_Feng_RNAseq$Phenotype, RNAseq_Wang_Feng)
+
+Baseline_Relapse_gene_expression_analysis <- RNAseq_Wang_Feng_analysis[["Baseline-Relapse"]]
+
+
+up_entrez_in_Baseline <- Baseline_Relapse_gene_expression_analysis %>%
+  dplyr::filter(., logFC > 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+down_entrez_in_Baseline <- Baseline_Relapse_gene_expression_analysis %>%
+  dplyr::filter(., logFC < 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+
+Genes_repressed_during_Relapse <- enrichGO(
+  gene = unique(up_entrez_in_Baseline$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none",
+  universe = gene_universe_RNAseq_Wang_Feng
+)
+Genes_overexpressed_during_Relapse <- enrichGO(
+  gene = unique(down_entrez_in_Baseline$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none",
+  universe = gene_universe_RNAseq_Wang_Feng
+)
+```
+
+
+```{r}
+dotplot(Genes_repressed_during_Relapse, showCategory = 30, title = "Genes Down Relapse")
+dotplot(Genes_overexpressed_during_Relapse, showCategory = 30, title = "Genes Up Relapse")
+
+```
+
+### Cluster 1 vs Cluster 2
+
+```{r}
+Baseline_gene_expression_analysis <- RNAseq_Wang_Feng_Baseline_analysis[["cluster1-cluster2"]]
+
+up_entrez_in_cluster1 <- Baseline_gene_expression_analysis %>%
+  dplyr::filter(., logFC > 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+down_entrez_in_cluster1 <- Baseline_gene_expression_analysis %>%
+  dplyr::filter(., logFC < 0 & P.Value < 0.05) %>%
+  separate_rows(., ID, sep = "[|]") %>%
+  dplyr::filter(., grepl("[A-Za-z]", ID))
+
+Genes_more_expressed_in_cluster1 <- enrichGO(
+  gene = unique(up_entrez_in_cluster1$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none",
+  universe = gene_universe_RNAseq_Wang_Feng
+)
+Genes_more_expressed_in_cluster2 <- enrichGO(
+  gene = unique(down_entrez_in_cluster1$ID),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none",
+  universe = gene_universe_RNAseq_Wang_Feng
+)
+```
+
+
+```{r}
+dotplot(Genes_more_expressed_in_cluster1, showCategory = 30, title = "Genes Up in Cluster1")
+dotplot(Genes_more_expressed_in_cluster2, showCategory = 30, title = "Genes Up in Cluster2")
+
+```
+
+## Volcano plot
+
+### Baseline vs Relapse
+
+```{r}
+volcanoplot_gene_expression(RNAseq_Wang_Feng_analysis[["Baseline-Relapse"]], "Baseline vs Relapse", xlim = 20)
+```
+
+### Cluster 1 vs Cluster 2
+
+```{r}
+volcanoplot_gene_expression(RNAseq_Wang_Feng_Baseline_analysis[["cluster1-cluster2"]], "Cluster 1 vs Cluster 2", xlim = 100)
+```
+
+```{r}
+AnnotatedDataFrame_Koichi_Baseline_data <- AnnotatedDataFrame(RNAseq_Wang_Feng_Baseline, 
+                   varMetadata = data.frame("Label" = Phenotype_Wang_Feng_RNAseq_clustered$Sample, "labelDescription" = Phenotype_Wang_Feng_RNAseq_clustered$Phenotype))
+
+eset <- ExpressionSet(as.matrix(RNAseq_Wang_Feng_Baseline))
+
+signature <- rowTtest(RNAseq_Wang_Feng_Baseline %>%
+                        dplyr::select(., Phenotype_Wang_Feng_RNAseq_clustered %>%
+                                        dplyr::filter(., Phenotype == "cluster1") %>%
+                                        dplyr::select(., "Sample") %>%
+                                        .$Sample) %>%
+                        as.matrix(.),
+                      RNAseq_Wang_Feng_Baseline %>%
+                        dplyr::select(., Phenotype_Wang_Feng_RNAseq_clustered %>%
+                                        dplyr::filter(., Phenotype == "cluster2") %>%
+                                        dplyr::select(., "Sample") %>%
+                                        .$Sample) %>%
+                        as.matrix(.))
+
+signature <- (qnorm(signature$p.value/2,lower.tail = FALSE) * sign(signature$statistic))[,1]
+
+nullmodel <- ttestNull(RNAseq_Wang_Feng_Baseline %>%
+                        dplyr::select(., Phenotype_Wang_Feng_RNAseq_clustered %>%
+                                        dplyr::filter(., Phenotype == "cluster1") %>%
+                                        dplyr::select(., "Sample") %>%
+                                        .$Sample) %>%
+                        as.matrix(.),
+                      RNAseq_Wang_Feng_Baseline %>%
+                        dplyr::select(., Phenotype_Wang_Feng_RNAseq_clustered %>%
+                                        dplyr::filter(., Phenotype == "cluster2") %>%
+                                        dplyr::select(., "Sample") %>%
+                                        .$Sample) %>%
+                        as.matrix(.), 
+                      per = 1000, 
+                      repos = TRUE, 
+                      verbose = FALSE)
+
+
+names_signature <- names(signature) %>%
+  str_split(., "[|]") %>%
+  lapply(., function(.){
+    .[1]
+  }) %>%
+  unlist(.)
+
+names(signature) <- names_signature
+
+library(biomaRt)
+
+ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+genes_annotated <- getBM(attributes = c('hgnc_symbol', 'entrezgene_id'), filters = 'entrezgene_id', values = names(regulonlaml), mart = ensembl)
+
+names_signature <- data.frame("Name" = names_signature, value = signature)
+names_signature <- merge(names_signature, genes_annotated, by.x = "Name", by.y = "hgnc_symbol")
+names_signature <- names_signature %>%
+  dplyr::filter(., !duplicated(.$entrezgene_id))
+
+rownames(names_signature) <- names_signature$entrezgene_id
+signature_named_vector <- names_signature$value
+names(signature_named_vector) <- names_signature$entrezgene_id
+
+mrs <- msviper(signature_named_vector, regulonlaml, verbose = FALSE)
+
+Res <- summary(mrs, mrs = 100) %>%
+  merge(., genes_annotated, by.x = "Regulon", by.y = "entrezgene_id") %>%
+  .[order(.$p.value),]
+
+
+Res
+```
+
+
+```{r}
+ledge_mrs <- ledge(mrs)
+
+summary(ledge_mrs) %>%
+  merge(., genes_annotated, by.x = "Regulon", by.y = "entrezgene_id") %>%
+  .[order(.$p.value),]
+```
+
+# Lucille's data
+
+## Global data
+
+```{r}
+BMIQ_Lucille <- readRDS(file = "../DATA/BMIQ_Lucille.rds")
+
+Phenotype_Lucille <- readRDS(file = "../DATA/Phenotype_Lucille.Rds")
+Phenotype_Lucille$Phenotype <- Phenotype_Lucille$Cell_line
+Phenotype_Lucille
+```
+
+### Principal Component Analysis
+
+```{r}
+DATA_for_PCA <- t(as.data.frame(BMIQ_Lucille))
+res.pca <- PCA(DATA_for_PCA, ncp = 3, graph = TRUE)
+
+fviz_eig(res.pca, addlabels = TRUE)
+```
+
+### Clustering
+
+```{r}
+BMIQ_Lucille_high_variance <- Focus_high_variance_CpGs(BMIQ_Lucille, percentage = 1)
+
+ann_color <- list(
+    Phenotype = c(HL60.basal = "red", HL60.Ag120 = "green", HL60WT.basal = "blue", MOLMWT.basal = "blue", MOLM.basal = "red", MOLM.AGI120	= "green"))
+
+Make_heatmap(BMIQ_Lucille_high_variance, Phenotype_Lucille, "pearson", "High variable", ann_color)
+```
+
+### Deconvolution
+
+```{r}
+res <- epidish(as.matrix(BMIQ_Lucille), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin_Lucille_DATA <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Lucille_DATA$Values <- round(deconvolution_violin_Lucille_DATA$Values, 1)
+
+ggplot(deconvolution_violin_Lucille_DATA, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("All the sample")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+### DNA methylation high variable CpGs
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Lucille, BMIQ_Lucille_high_variance, c("HL60WT.basal", "HL60.basal"), fill_colour = c("#00FF00", "#FF0000", "#0000FF", "#00FF00", "#FF0000", "#0000FF"))
+```
+
+# HL60
+
+```{r}
+BMIQ_Lucille_HL60 <- BMIQ_Lucille[,c(1:3)]
+Phenotype_Lucille_HL60 <- Phenotype_Lucille[c(1:3),]
+Phenotype_Lucille_HL60 <- droplevels(Phenotype_Lucille_HL60)
+Phenotype_Lucille_HL60
+```
+
+### Deconvolution
+
+```{r}
+res <- epidish(as.matrix(BMIQ_Lucille_HL60), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin_Lucille_HL60_DATA <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Lucille_HL60_DATA$Values <- round(deconvolution_violin_Lucille_HL60_DATA$Values, 1)
+
+ggplot(deconvolution_violin_Lucille_HL60_DATA, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("HL60")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+### Heatmap
+
+```{r}
+BMIQ_Lucille_HL60_high_variance <- Focus_high_variance_CpGs(BMIQ_Lucille_HL60, 1)
+
+ann_color <- list(
+    Phenotype = c(HL60.basal = "red", HL60.Ag120 = "green", HL60WT.basal = "blue", MOLMWT.basal = "blue", MOLM.basal = "red", MOLM.AGI120	= "green"))
+
+Make_heatmap(BMIQ_Lucille_HL60_high_variance, Phenotype_Lucille_HL60, "pearson", "High variable", ann_color)
+
+Make_heatmap(BMIQ_Lucille_HL60, Phenotype_Lucille_HL60, "pearson", "all CpGs", ann_color)
+```
+
+## HL60 Mut vs HL60 WT
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Lucille_HL60, BMIQ_Lucille_HL60_high_variance, c("HL60WT.basal", "HL60.basal"), fill_colour = c("#00FF00", "#FF0000", "#0000FF"))
+```
+
+### Genes Hypermethylated in Mut compared to WT
+
+```{r}
+BMIQ_Lucille_analysis <- Differential_analysis(Phenotype_Lucille$Phenotype, BMIQ_Lucille)
+
+Response_diff_hypermet_in_Mut_vs_WT_HL60 <- BMIQ_Lucille_analysis[["HL60.basal-HL60WT.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_WT_vs_Mut_HL60 <- BMIQ_Lucille_analysis[["HL60.basal-HL60WT.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_Mut_vs_WT_HL60 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Mut_vs_WT_HL60$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_WT_HL60_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Mut_vs_WT_HL60$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_WT_vs_Mut_HL60 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_WT_vs_Mut_HL60$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_WT_vs_Mut_HL60_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_WT_vs_Mut_HL60$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_WT_HL60_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_WT_HL60,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_WT_HL60_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_WT_HL60_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_vs_Mut_HL60_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_WT_vs_Mut_HL60,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_vs_Mut_HL60_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_WT_vs_Mut_HL60_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_WT_HL60_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Mut_vs_WT_HL60, Genes_hypermetylated_in_Mut_vs_WT_HL60_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_vs_Mut_HL60_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_WT_vs_Mut_HL60, Genes_hypermetylated_in_WT_vs_Mut_HL60_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+
+```{r}
+dotplot(Genes_hypermetylated_in_Mut_vs_WT_HL60_ego, showCategory = 30, title = "Hypermet Mut vs WT", font.size = 9)
+dotplot(Genes_hypermetylated_in_Mut_vs_WT_HL60_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood Mut", font.size = 9)
+dotplot(Genes_hypermetylated_in_WT_vs_Mut_HL60_ego, showCategory = 30, title = "Hypermet WT vs Mut", font.size = 9)
+dotplot(Genes_hypermetylated_in_WT_vs_Mut_HL60_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood WT", font.size = 9)
+```
+#dotplot(Genes_hypermetylated_in_Mut_vs_WT_HL60_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer Mut")
+#dotplot(Genes_hypermetylated_in_WT_vs_Mut_HL60_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer WT")
+
+### Volcano plot
+
+```{r}
+volcanoplot_methylation(BMIQ_Lucille_analysis[["HL60.basal-HL60WT.basal"]], match_hit_CpGs_Blueprint_EPIC, "IDHm vs WT")
+```
+
+## HL60 Mut vs HL60 IDHi
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Lucille_HL60, BMIQ_Lucille_HL60_high_variance, c("HL60.basal", "HL60.Ag120"), fill_colour = c("#00FF00", "#FF0000", "#0000FF"))
+```
+
+### Genes Hypermethylated in Mut compared to WT
+
+```{r}
+Response_diff_hypermet_in_Inhib_vs_Mut_HL60 <- BMIQ_Lucille_analysis[["HL60.Ag120-HL60.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_Mut_vs_Inhib_HL60 <- BMIQ_Lucille_analysis[["HL60.Ag120-HL60.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_HL60 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Inhib_vs_Mut_HL60$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_HL60_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Inhib_vs_Mut_HL60$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_HL60 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Mut_vs_Inhib_HL60$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_HL60_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Mut_vs_Inhib_HL60$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_HL60_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Inhib_vs_Mut_HL60,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_HL60_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Inhib_vs_Mut_HL60_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_HL60_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_Inhib_HL60,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_HL60_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_Inhib_HL60_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_HL60_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Inhib_vs_Mut_HL60, Genes_hypermetylated_in_Inhib_vs_Mut_HL60_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_HL60_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Mut_vs_Inhib_HL60, Genes_hypermetylated_in_Mut_vs_Inhib_HL60_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+
+```{r}
+dotplot(Genes_hypermetylated_in_Inhib_vs_Mut_HL60_ego, showCategory = 30, title = "Hypermet Mut vs WT")
+dotplot(Genes_hypermetylated_in_Inhib_vs_Mut_HL60_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood Mut", font.size = 9)
+dotplot(Genes_hypermetylated_in_Inhib_vs_Mut_HL60_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer Mut")
+dotplot(Genes_hypermetylated_in_Mut_vs_Inhib_HL60_ego, showCategory = 30, title = "Hypermet WT vs Mut")
+dotplot(Genes_hypermetylated_in_Mut_vs_Inhib_HL60_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood WT", font.size = 9)
+dotplot(Genes_hypermetylated_in_Mut_vs_Inhib_HL60_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer WT", font.size = 9)
+```
+
+### Volcano plot
+
+```{r}
+volcanoplot_methylation(BMIQ_Lucille_analysis[["HL60.Ag120-HL60.basal"]], match_hit_CpGs_Blueprint_EPIC, "IDHi vs Mut")
+```
+
+# MOLM14
+
+```{r}
+BMIQ_Lucille_MOLM14 <- BMIQ_Lucille[,c(4:7)]
+Phenotype_Lucille_MOLM14 <- Phenotype_Lucille[c(4:7),]
+Phenotype_Lucille_MOLM14 <- droplevels(Phenotype_Lucille_MOLM14)
+Phenotype_Lucille_MOLM14
+
+BMIQ_Lucille_MOLM14_high_variance <- Focus_high_variance_CpGs(BMIQ_Lucille_MOLM14, 1)
+```
+
+### Deconvolution
+
+```{r}
+res <- epidish(as.matrix(BMIQ_Lucille_MOLM14), as.matrix(signature), method = "RPC")
+Fres <- as.data.frame(res$estF)
+Fres <- cbind(Sample = rownames(Fres), Fres)
+Fres[, -1] <- round(Fres[, -1], 3)
+
+deconvolution_violin_Lucille_MOLM_DATA <- data.frame(Cell_Type = rep(colnames(Fres[,c(2:12)]), each = length(rownames(Fres))),
+                          Values = Fres[,c(2:12)] %>% c(.) %>% unlist(.) %>% as.vector(.))
+deconvolution_violin_Lucille_MOLM_DATA$Values <- round(deconvolution_violin_Lucille_MOLM_DATA$Values, 1)
+
+ggplot(deconvolution_violin_Lucille_MOLM_DATA, aes(x=Cell_Type, y=Values, fill=Cell_Type), las = 2) + 
+  geom_violin() + 
+  ggtitle("All the sample")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+### Heatmap
+
+```{r}
+ann_color <- list(
+    Phenotype = c(HL60.basal = "red", HL60.Ag120 = "green", HL60WT.basal = "blue", MOLMWT.basal = "blue", MOLM.basal = "red", MOLM.AGI120	= "green"))
+
+Make_heatmap(BMIQ_Lucille_MOLM14_high_variance, Phenotype_Lucille_MOLM14, "pearson", "High variable", ann_color)
+
+Make_heatmap(BMIQ_Lucille_MOLM14, Phenotype_Lucille_MOLM14, "pearson", "all CpGs", ann_color)
+```
+
+## MOLM14 IDHWT vs MOLM14 IDHm
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Lucille_MOLM14, BMIQ_Lucille_MOLM14_high_variance, c("MOLMWT.basal", "MOLM.basal"), fill_colour = c("#00FF00", "#FF0000", "#0000FF"))
+```
+### Genes Hypermethylated in Mut compared to WT
+
+```{r}
+Response_diff_hypermet_in_Mut_vs_WT_MOLM14 <- BMIQ_Lucille_analysis[["MOLM.basal-MOLMWT.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_WT_vs_Mut_MOLM14 <- BMIQ_Lucille_analysis[["MOLM.basal-MOLMWT.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_Mut_vs_WT_MOLM14 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Mut_vs_WT_MOLM14$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_WT_MOLM14_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Mut_vs_WT_MOLM14$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_WT_vs_Mut_MOLM14 <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_WT_vs_Mut_MOLM14$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_WT_vs_Mut_MOLM14_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_WT_vs_Mut_MOLM14$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_WT_MOLM14_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_WT_MOLM14,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_WT_MOLM14_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_WT_MOLM14_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_vs_Mut_MOLM14_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_WT_vs_Mut_MOLM14,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_vs_Mut_MOLM14_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_WT_vs_Mut_MOLM14_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_WT_MOLM14_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Mut_vs_WT_MOLM14, Genes_hypermetylated_in_Mut_vs_WT_MOLM14_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_WT_vs_Mut_MOLM14_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_WT_vs_Mut_MOLM14, Genes_hypermetylated_in_WT_vs_Mut_MOLM14_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+```{r}
+dotplot(Genes_hypermetylated_in_Mut_vs_WT_MOLM14_ego, showCategory = 30, title = "Hypermet Mut vs WT")
+dotplot(Genes_hypermetylated_in_Mut_vs_WT_MOLM14_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood Mut", font.size = 9)
+dotplot(Genes_hypermetylated_in_Mut_vs_WT_MOLM14_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer Mut")
+dotplot(Genes_hypermetylated_in_WT_vs_Mut_MOLM14_ego, showCategory = 30, title = "Hypermet WT vs Mut")
+dotplot(Genes_hypermetylated_in_WT_vs_Mut_MOLM14_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood WT", font.size = 9)
+#dotplot(Genes_hypermetylated_in_WT_vs_Mut_MOLM14_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer WT")
+```
+
+### Volcano plot
+
+```{r}
+volcanoplot_methylation(BMIQ_Lucille_analysis[["MOLM.basal-MOLMWT.basal"]], match_hit_CpGs_Blueprint_EPIC, "IDHm vs WT")
+```
+
+## MOLM Mut vs MOLM IDHi
+
+```{r}
+Focus_global_methylation(match_hit_CpGs_Blueprint_EPIC, anno_EPIC, Phenotype_Lucille_MOLM14, BMIQ_Lucille_MOLM14_high_variance, c("MOLM.basal", "MOLM.AGI120"), fill_colour = c("#00FF00", "#FF0000", "#0000FF"))
+```
+
+### Genes Hypermethylated in Mut compared to WT
+
+```{r}
+Response_diff_hypermet_in_Inhib_vs_Mut_MOLM <- BMIQ_Lucille_analysis[["MOLM.AGI120-MOLM.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC > 0.3)
+
+Response_diff_hypermet_in_Mut_vs_Inhib_MOLM <- BMIQ_Lucille_analysis[["MOLM.AGI120-MOLM.basal"]] %>% 
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., logFC < 0.3)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_MOLM <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Inhib_vs_Mut_MOLM$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Inhib_vs_Mut_MOLM$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_MOLM <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Mut_vs_Inhib_MOLM$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Mut_vs_Inhib_MOLM$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Inhib_vs_Mut_MOLM,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_Inhib_MOLM,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_enhancer_ego <- enrichGO(
+  gene = Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Inhib_vs_Mut_MOLM, Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_promoter_and_enhancer_ego <- enrichGO(
+  gene = unique(c(Genes_hypermetylated_in_Mut_vs_Inhib_MOLM, Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_enhancer)),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "ALL",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+```
+
+```{r}
+dotplot(Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_ego, showCategory = 30, title = "Hypermet inhib vs Mut", font.size = 9)
+dotplot(Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood Inhib", font.size = 9)
+dotplot(Genes_hypermetylated_in_Inhib_vs_Mut_MOLM_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer Inhib", font.size = 9)
+dotplot(Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_ego, showCategory = 30, title = "Hypermet Mut vs Inhib", font.size = 9)
+dotplot(Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood Mut", font.size = 9)
+dotplot(Genes_hypermetylated_in_Mut_vs_Inhib_MOLM_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer Mut", font.size = 9)
+```
+
+### Volcano plot
+
+```{r}
+volcanoplot_methylation(BMIQ_Lucille_analysis[["MOLM.AGI120-MOLM.basal"]], match_hit_CpGs_Blueprint_EPIC, "IDHi vs Mut")
+```
