@@ -1,0 +1,127 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+DMR_IDHm_IDHwt_TCGA <- champ.DMR(as.matrix(BMIQ_CD34_IDHm_WT[,c(1:45)]), pheno = Phenotype_BMIQ_CD34_IDHm_WT$Phenotype[c(1:45)], cores = 6)
+
+DMR_IDHm_IDHwt_TCGA$BumphunterDMR$seqnames <- str_replace(DMR_IDHm_IDHwt_TCGA$BumphunterDMR$seqnames, "chr", "")
+```
+
+```{r}
+DMR_Granges_IDHm_IDHwt <- GRanges(
+    seqnames = DMR_IDHm_IDHwt_TCGA$BumphunterDMR$seqnames,
+    ranges = IRanges(start = DMR_IDHm_IDHwt_TCGA$BumphunterDMR$start, end = DMR_IDHm_IDHwt_TCGA$BumphunterDMR$end),
+    Value = DMR_IDHm_IDHwt_TCGA$BumphunterDMR$value,
+    Length = DMR_IDHm_IDHwt_TCGA$BumphunterDMR$L,
+    P.value = DMR_IDHm_IDHwt_TCGA$BumphunterDMR$p.value
+)
+
+overlaps <- findOverlaps(Blueprint_Granges, DMR_Granges_IDHm_IDHwt)
+match_hit <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps),]),
+                                       data.frame(mcols(DMR_Granges_IDHm_IDHwt[subjectHits(overlaps),]))) %>%
+  dplyr::filter(., type == "P")
+
+table(match_hit$Blueprint_gene_names) %>%
+  as.data.frame(.) %>%
+  .$Freq %>%
+  boxplot(.)
+
+Genes_hyper_IDHmvsIDHwt_TCGA <- match_hit %>%
+  dplyr::filter(., Value < 0) %>%
+  dplyr::select(., Blueprint_gene_names) %>%
+  .$Blueprint_gene_names
+
+Genes_hypo_IDHmvsIDHwt_TCGA <- match_hit %>%
+  dplyr::filter(., Value > 0) %>%
+  dplyr::select(., Blueprint_gene_names) %>%
+  .$Blueprint_gene_names
+
+Genes_hypermetylated_ego <- enrichGO(
+  gene = Genes_hyper_IDHm_TCGA,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+
+dotplot(Genes_hypermetylated_ego, showCategory = 30, title = "", font.size = 6)
+```
+
+```{r}
+overlaps <- findOverlaps(PCHiC_GRange, DMR_Granges_IDHm_IDHwt)
+match_hit <- data.frame(mcols(PCHiC_GRange[queryHits(overlaps),]),
+                                       data.frame(mcols(DMR_Granges_IDHm_IDHwt[subjectHits(overlaps),])))
+
+match_hit_hyper <- match_hit %>%
+  dplyr::filter(., Value < 0)
+
+match_hit_hypo <- match_hit %>%
+  dplyr::filter(., Value > 0)
+```
+
+
+```{r}
+neighbor_bait <- pchic %>%
+  dplyr::filter(., IDbait %in% match_hit_hyper$ID)
+neighbor_bait$ID_oe <- neighbor_bait$IDoe
+neighbor_bait <- neighbor_bait %>%
+  dplyr::select(., c(6:10)) %>%
+  unique(.)
+colnames(neighbor_bait) <- c("chr", "start", "end", "ID", "Gene_name")
+
+neighbor_oe <- pchic %>%
+  dplyr::filter(., IDoe %in% match_hit_hyper$ID)
+neighbor_oe$ID_bait <- neighbor_bait$IDbait
+neighbor_oe <- neighbor_oe %>%
+  dplyr::select(., c(1:5)) %>%
+  unique(.)
+colnames(neighbor_oe) <- c("chr", "start", "end", "ID", "Gene_name")
+
+neighbor <- rbind(neighbor_bait, neighbor_oe) %>%
+  unique(.)
+
+neighbor_genes_hyper <- matchit_Blueprint_Pchic %>%
+  dplyr::filter(., ID %in% neighbor$ID)
+```
+
+```{r}
+Genes_hypermetylated_enh_ego <- enrichGO(
+  gene = unique(neighbor_genes_hyper$Blueprint_gene_names),
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_450K
+)
+
+dotplot(Genes_hypermetylated_enh_ego, showCategory = 30, title = "", font.size = 6)
+```
+
+
+```{r}
+neighbor_bait <- pchic %>%
+  dplyr::filter(., IDbait %in% match_hit_hypo$ID)
+neighbor_bait$ID_oe <- neighbor_bait$IDoe
+neighbor_bait <- neighbor_bait %>%
+  dplyr::select(., c(6:10)) %>%
+  unique(.)
+colnames(neighbor_bait) <- c("chr", "start", "end", "ID", "Gene_name")
+
+neighbor_oe <- pchic %>%
+  dplyr::filter(., IDoe %in% match_hit_hypo$ID)
+neighbor_oe$ID_bait <- neighbor_bait$IDbait
+neighbor_oe <- neighbor_oe %>%
+  dplyr::select(., c(1:5)) %>%
+  unique(.)
+colnames(neighbor_oe) <- c("chr", "start", "end", "ID", "Gene_name")
+
+neighbor <- rbind(neighbor_bait, neighbor_oe) %>%
+  unique(.)
+
+neighbor_genes_hypo <- matchit_Blueprint_Pchic %>%
+  dplyr::filter(., ID %in% neighbor$ID)
+```

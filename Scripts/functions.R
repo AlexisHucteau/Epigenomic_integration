@@ -106,9 +106,6 @@ Gene_name_finding <- function(gene){
 }
 
 
-
-
-
 Look_at_differential_methylation <- function(Phenotype, DATA_met){
   TS <- Phenotype$Phenotype
   TS <- factor(TS, levels = levels(as.factor(Phenotype$Phenotype)))
@@ -804,6 +801,14 @@ volcanoplot_gene_expression <- function(DATA, title, xlim = 10, ylim = 5){
                   ylim = c(0, ylim),
                   xlim = c(-xlim, xlim)
   )
+}
+
+
+Filter_gene_DM_in_promoter <- function(DMPs, Gene_cpgs_annotation_Promoter){
+  DMPs_and_genes <- merge(DMPs, Gene_cpgs_annotation_Promoter, by.x = "ID", by.y = "CpG") %>%
+    dplyr::select(., "Blueprint_gene_names", "logFC")
+  
+  return(DMPs_and_genes)
 }
 
 

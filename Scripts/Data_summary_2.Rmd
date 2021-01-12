@@ -24,9 +24,6 @@ Wang_Feng_RNAseq: Gene expression from Koichi's study
 
 ```{r, include=FALSE}
 source("functions.R")
-
-data(regulonlaml)
-
 ```
 
 ## Preparation of annotations data
@@ -136,6 +133,13 @@ signature <- read.csv("../DATA/BPmetCan.txt", sep = "\t")
 rownames(signature) <- signature$CpGs
 signature <- signature[,-1]
 
+number_CpG_per_gene_450 <- table(match_hit_CpGs_Blueprint_promoter_450$Blueprint_gene_names) %>%
+  as.data.frame(.) %>%
+  .[-1,]
+
+number_CpG_per_gene_EPIC <- table(match_hit_CpGs_Blueprint_promoter_EPIC$Blueprint_gene_names) %>%
+  as.data.frame(.) %>%
+  .[-1,]
 ```
 
 # TCGA
@@ -248,7 +252,10 @@ Focus_gene_promoter_neighborhood_methylation("PTEN", match_hit_CpGs_Blueprint_pr
 
 ```{r}
 BMIQ_TCGA_analysis <- Differential_analysis(Phenotype_BMIQ_CD34_IDHm_WT$Phenotype, BMIQ_CD34_IDHm_WT)
+```
 
+
+```{r}
 Response_diff_hypermet_in_IDHm <- BMIQ_TCGA_analysis[["IDHm-WT"]] %>% 
   dplyr::filter(., P.Value < 0.01) %>%
   dplyr::filter(., logFC > 0.3)
@@ -327,6 +334,36 @@ Genes_hypermetylated_in_WT_promoter_and_enhancer_ego <- enrichGO(
   universe = gene_universe_450K
 )
 ```
+
+```{r}
+DMP_IDHm_IDHwt_TCGA <- BMIQ_TCGA_analysis[["IDHm-WT"]] %>%
+  dplyr::filter(., P.Value < 0.01) %>%
+  dplyr::filter(., abs(logFC) > 0.3)
+
+Genes_DMP <- Filter_gene_DM_in_promoter(DMP_IDHm_IDHwt_TCGA, match_hit_CpGs_Blueprint_promoter_450)
+
+Genes_DMP_hyper <- Genes_DMP %>%
+  dplyr::filter(., logFC > 0)
+
+Genes_DMP_hypo <- Genes_DMP %>%
+  dplyr::filter(., logFC < 0)
+
+Look_at_proportions <- merge(number_CpG_per_gene_450, table(Genes_DMP_hyper$Blueprint_gene_names), by.x = "Var1", by.y = "Var1", all.x = TRUE) %>%
+  merge(., table(Genes_DMP_hypo$Blueprint_gene_names), by.x = "Var1", by.y = "Var1", all.x = TRUE)
+
+
+Look_at_proportions$Proportion_hyper <- Look_at_proportions$Freq.y / Look_at_proportions$Freq.x
+Look_at_proportions$Proportion_hypo <- Look_at_proportions$Freq / Look_at_proportions$Freq.x
+Look_at_proportions$DM <- if(Look_at_proportions$Proportion_hypo < Look_at_proportions$Proportion_hyper){
+  "Hyper"
+}else if(Look_at_proportions$Proportion_hypo > Look_at_proportions$Proportion_hyper){
+  "Hypo"
+}else{
+  NA
+}
+
+```
+
 
 
 ```{r}
