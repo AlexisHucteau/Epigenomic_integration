@@ -1,0 +1,15 @@
+INFO [2021-01-12 17:26:40] [[1]]
+INFO [2021-01-12 17:26:40] Genes_hypometh
+INFO [2021-01-12 17:26:40] 
+INFO [2021-01-12 17:26:40] $category.names
+INFO [2021-01-12 17:26:40] c("TCGA", "Whiele", "Koichi")
+INFO [2021-01-12 17:26:40] 
+INFO [2021-01-12 17:26:40] $output
+INFO [2021-01-12 17:26:40] [1] TRUE
+INFO [2021-01-12 17:26:40] 
+INFO [2021-01-12 17:26:40] $filename
+INFO [2021-01-12 17:26:40] [1] "../Results/Genes_hypo_stress_auto.png"
+INFO [2021-01-12 17:26:40] 
+INFO [2021-01-12 17:26:40] $fill
+INFO [2021-01-12 17:26:40] myCol
+INFO [2021-01-12 17:26:40] 

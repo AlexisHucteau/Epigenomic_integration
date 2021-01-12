@@ -811,4 +811,133 @@ Filter_gene_DM_in_promoter <- function(DMPs, Gene_cpgs_annotation_Promoter){
   return(DMPs_and_genes)
 }
 
+Genes_DMR_analysis <- function(DMR_analysis, gene_universe = gene_universe_450K){
+  res <- list()
+  DMR_Grange <- GRanges(
+    seqnames = DMR_analysis$BumphunterDMR$seqnames,
+    ranges = IRanges(start = DMR_analysis$BumphunterDMR$start, end = DMR_analysis$BumphunterDMR$end),
+    Value = DMR_analysis$BumphunterDMR$value,
+    Length = DMR_analysis$BumphunterDMR$L,
+    P.value = DMR_analysis$BumphunterDMR$p.value
+  )
+  message("================ Overlapping between DMR results and Blueprint annotation ==================")
+  overlaps <- findOverlaps(Blueprint_Granges, DMR_Grange)
+  match_hit <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps),]),
+                          data.frame(mcols(DMR_Grange[subjectHits(overlaps),]))) %>%
+    dplyr::filter(., type == "P")
+  message(paste0(length(rownames(match_hit)), " fragments found"))
+  Genes_hyper <- match_hit %>%
+    dplyr::filter(., Value < 0) %>%
+    dplyr::select(., Blueprint_gene_names) %>%
+    .$Blueprint_gene_names
+  message(paste0(length(Genes_hyper), " genes hypermethylated"))
+  Genes_hypo <- match_hit %>%
+    dplyr::filter(., Value > 0) %>%
+    dplyr::select(., Blueprint_gene_names) %>%
+    .$Blueprint_gene_names
+  message(paste0(length(Genes_hypo), " genes hypomethylated"))
+  
+  message("=================== Gene ontology analysis ======================")
+  Genes_hypermetylated_ego <- enrichGO(
+    gene = Genes_hyper,
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = gene_universe
+  )
+  
+  Genes_hypometylated_ego <- enrichGO(
+    gene = Genes_hypo,
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = gene_universe
+  )
+  
+  res[["Genes_hypermethylated"]] <- Genes_hyper
+  res[["Genes_hypomethylated"]] <- Genes_hypo
+  res[["GO_hypermeth"]] <- Genes_hypermetylated_ego
+  res[["GO_hypometh"]] <- Genes_hypometylated_ego
+  message("=========== Enhancer analysis =============")
+  overlaps <- findOverlaps(PCHiC_GRange, DMR_Grange)
+  match_hit <- data.frame(mcols(PCHiC_GRange[queryHits(overlaps),]),
+                          data.frame(mcols(DMR_Grange[subjectHits(overlaps),])))
+  
+  message(paste0(length(match_hit$ID), " fragments found"))
+  match_hit_hyper <- match_hit %>%
+    dplyr::filter(., Value < 0)
+  
+  match_hit_hypo <- match_hit %>%
+    dplyr::filter(., Value > 0)
+  
+  neighbor_hyper <- look_at_neighborhood(match_hit_hyper, pchic)
+  
+  neighbor_hypo <- look_at_neighborhood(match_hit_hypo, pchic)
+  
+  neighbor_genes_hyper <- matchit_Blueprint_Pchic %>%
+    dplyr::filter(., ID %in% neighbor_hyper$ID)
+  
+  neighbor_genes_hypo <- matchit_Blueprint_Pchic %>%
+    dplyr::filter(., ID %in% neighbor_hypo$ID)
+  
+  genes_enh_hyper <- neighbor_genes_hyper$Blueprint_gene_names %>% unique(.)
+  genes_enh_hypo <- neighbor_genes_hypo$Blueprint_gene_names %>% unique(.)
+  message(paste0(length(genes_enh_hyper), " genes hypermethylated"))
+  message(paste0(length(genes_enh_hypo), " genes hypomethylated"))
+  
+  message("=================== Gene ontology analysis ======================")
 
+  
+  Genes_hypermetylated_ego <- enrichGO(
+    gene = genes_enh_hyper,
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = gene_universe
+  )
+  
+  Genes_hypometylated_ego <- enrichGO(
+    gene = genes_enh_hypo,
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = gene_universe
+  )
+  
+  res[["neighbor_genes_hyper"]] <- neighbor_genes_hyper
+  res[["neighbor_genes_hypo"]] <- neighbor_genes_hypo
+  res[["Genes_enh_hyper"]] <- genes_enh_hyper
+  res[["Genes_enh_hypo"]] <- genes_enh_hypo
+  res[["GO_enh_hypermeth"]] <- Genes_hypermetylated_ego
+  res[["GO_enh_hypometh"]] <- Genes_hypometylated_ego
+  
+  return(res)
+}
+
+
+look_at_neighborhood <- function(match_hit_DMR, pchic){
+  neighbor_bait <- pchic %>%
+    dplyr::filter(., IDbait %in% match_hit_DMR$ID)
+  neighbor_bait$ID_oe <- neighbor_bait$IDoe
+  neighbor_bait <- neighbor_bait %>%
+    dplyr::select(., c(6:10)) %>%
+    unique(.)
+  colnames(neighbor_bait) <- c("chr", "start", "end", "ID", "Gene_name")
+  
+  neighbor_oe <- pchic %>%
+    dplyr::filter(., IDoe %in% match_hit_DMR$ID)
+  neighbor_oe$ID_bait <- neighbor_bait$IDbait
+  neighbor_oe <- neighbor_oe %>%
+    dplyr::select(., c(1:5)) %>%
+    unique(.)
+  colnames(neighbor_oe) <- c("chr", "start", "end", "ID", "Gene_name")
+  
+  neighbor <- rbind(neighbor_bait, neighbor_oe) %>%
+    unique(.)
+  
+  return(neighbor)
+}

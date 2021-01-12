@@ -1,0 +1,15 @@
+INFO [2021-01-12 16:41:30] [[1]]
+INFO [2021-01-12 16:41:30] Genes_hypermeth
+INFO [2021-01-12 16:41:30] 
+INFO [2021-01-12 16:41:30] $category.names
+INFO [2021-01-12 16:41:30] c("TCGA", "Whiele", "Koichi")
+INFO [2021-01-12 16:41:30] 
+INFO [2021-01-12 16:41:30] $output
+INFO [2021-01-12 16:41:30] [1] TRUE
+INFO [2021-01-12 16:41:30] 
+INFO [2021-01-12 16:41:30] $filename
+INFO [2021-01-12 16:41:30] [1] "../Results/Genes_hypermethylated_Venn_diagram.png"
+INFO [2021-01-12 16:41:30] 
+INFO [2021-01-12 16:41:30] $fill
+INFO [2021-01-12 16:41:30] myCol
+INFO [2021-01-12 16:41:30] 

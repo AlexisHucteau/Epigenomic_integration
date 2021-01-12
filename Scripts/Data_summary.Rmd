@@ -41,7 +41,7 @@ Overlapping of the different sources of annotations
 ```{r}
 gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT2", "PPARGC1A", "PTEN")
 
-Blueprint <- read.csv("../BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
+Blueprint <- read.csv("../DATA/BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
   dplyr::select(., "gene_names":"type", "gene_type") %>%
   separate_rows(., gene_names, sep = " ") %>%
   separate_rows(., gene_type, sep = " ") %>%
@@ -397,7 +397,10 @@ volcanoplot_methylation(BMIQ_TCGA_analysis[["CD34-IDHm"]], match_hit_CpGs_Bluepr
 
 ```{r}
 load("../DATA/DATA_whiele.RData")
+```
 
+
+```{r}
 DATA_for_PCA <- t(as.data.frame(BMIQ_Whiele))
 res.pca <- PCA(DATA_for_PCA, ncp = 3, graph = TRUE)
 

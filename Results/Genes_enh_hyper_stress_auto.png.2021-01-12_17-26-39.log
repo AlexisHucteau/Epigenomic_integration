@@ -1,0 +1,15 @@
+INFO [2021-01-12 17:26:39] [[1]]
+INFO [2021-01-12 17:26:39] Genes_hypermeth_enh
+INFO [2021-01-12 17:26:39] 
+INFO [2021-01-12 17:26:39] $category.names
+INFO [2021-01-12 17:26:39] c("TCGA", "Whiele", "Koichi")
+INFO [2021-01-12 17:26:39] 
+INFO [2021-01-12 17:26:39] $output
+INFO [2021-01-12 17:26:39] [1] TRUE
+INFO [2021-01-12 17:26:39] 
+INFO [2021-01-12 17:26:39] $filename
+INFO [2021-01-12 17:26:39] [1] "../Results/Genes_enh_hyper_stress_auto.png"
+INFO [2021-01-12 17:26:39] 
+INFO [2021-01-12 17:26:39] $fill
+INFO [2021-01-12 17:26:39] myCol
+INFO [2021-01-12 17:26:39] 

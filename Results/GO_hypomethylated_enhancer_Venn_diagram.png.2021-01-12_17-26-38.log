@@ -1,0 +1,15 @@
+INFO [2021-01-12 17:26:38] [[1]]
+INFO [2021-01-12 17:26:38] GO_pathway_hypo_enh
+INFO [2021-01-12 17:26:38] 
+INFO [2021-01-12 17:26:38] $category.names
+INFO [2021-01-12 17:26:38] c("TCGA", "Whiele", "Koichi")
+INFO [2021-01-12 17:26:38] 
+INFO [2021-01-12 17:26:38] $output
+INFO [2021-01-12 17:26:38] [1] TRUE
+INFO [2021-01-12 17:26:38] 
+INFO [2021-01-12 17:26:38] $filename
+INFO [2021-01-12 17:26:38] [1] "../Results/GO_hypomethylated_enhancer_Venn_diagram.png"
+INFO [2021-01-12 17:26:38] 
+INFO [2021-01-12 17:26:38] $fill
+INFO [2021-01-12 17:26:38] myCol
+INFO [2021-01-12 17:26:38] 
