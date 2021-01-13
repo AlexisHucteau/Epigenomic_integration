@@ -39,6 +39,9 @@ Gene_hypometh <- DMR_analysis_IDHm_vs_IDHwt$Genes_hypomethylated
 Gene_hypometh
 
 write.csv(Gene_hypermeth, file = "../Results/Gene_hypermeth_TCGA.csv", row.names = FALSE)
+
+
+
 ```
 
 
@@ -180,6 +183,8 @@ Genes_hyper_in_IDHm_not_in_IDHwt <- Genes_hyper_in_IDHm[Genes_hyper_in_IDHm %ni%
 intersect(Genes_hyper_in_IDHm_not_in_IDHwt, Genes_hypo_in_IDHwt)
 
 write.csv(Genes_hyper_in_IDHm_not_in_IDHwt,file = "../Results/Genes_hyper_in_IDHm_not_in_IDHwt_DMP.csv", row.names = FALSE)
+
+
 ```
 
 
@@ -465,6 +470,11 @@ Genes_hypermeth <- list(
   Koichi = unique(DMR_analysis_Koichi$Genes_hypermethylated)
 )
 
+intersect(Genes_hypermeth$TCGA, Genes_hypermeth$Whiele)
+
+intersect(Genes_hypermeth_enh$TCGA, Genes_hypermeth_enh$Whiele)
+
+
 Genes_hypermeth_enh <- list(
   TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hyper),
   Whiele = unique(DMR_analysis_Whiele$Genes_enh_hyper),
@@ -483,6 +493,7 @@ Genes_hypometh_enh <- list(
   Koichi = unique(DMR_analysis_Koichi$Genes_enh_hypo)
 )
 ```
+
 
 ### Venndiagramm
 

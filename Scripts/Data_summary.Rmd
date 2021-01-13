@@ -140,6 +140,9 @@ number_CpG_per_gene_450 <- table(match_hit_CpGs_Blueprint_promoter_450$Blueprint
 number_CpG_per_gene_EPIC <- table(match_hit_CpGs_Blueprint_promoter_EPIC$Blueprint_gene_names) %>%
   as.data.frame(.) %>%
   .[-1,]
+
+Gene_lists_folder <- "../Results/Tables report/Gene lists/"
+GO_folder <- "../Results/Tables report/GO/"
 ```
 
 # TCGA
@@ -333,38 +336,20 @@ Genes_hypermetylated_in_WT_promoter_and_enhancer_ego <- enrichGO(
   pAdjustMethod = "none", 
   universe = gene_universe_450K
 )
+
 ```
 
 ```{r}
-DMP_IDHm_IDHwt_TCGA <- BMIQ_TCGA_analysis[["IDHm-WT"]] %>%
-  dplyr::filter(., P.Value < 0.01) %>%
-  dplyr::filter(., abs(logFC) > 0.3)
+write.csv(Genes_hypermetylated_in_IDHm_ego@result, file = paste0(GO_folder, "Genes_hypermetylated_in_IDHm_TCGA_ego.csv"))
+write.csv(Genes_hypermetylated_in_IDHm_enhancer_ego@result, file = paste0(GO_folder,"Genes_hypermetylated_in_IDHm_enhancer_TCGA_ego.csv"))
+write.csv(Genes_hypermetylated_in_WT_ego@result, file = paste0(GO_folder,"Genes_hypometylated_in_IDHm_TCGA_ego.csv"))
+write.csv(Genes_hypermetylated_in_WT_enhancer_ego@result, file = paste0(GO_folder,"Genes_hypometylated_in_IDHm_enhancer_TCGA_ego.csv"))
 
-Genes_DMP <- Filter_gene_DM_in_promoter(DMP_IDHm_IDHwt_TCGA, match_hit_CpGs_Blueprint_promoter_450)
-
-Genes_DMP_hyper <- Genes_DMP %>%
-  dplyr::filter(., logFC > 0)
-
-Genes_DMP_hypo <- Genes_DMP %>%
-  dplyr::filter(., logFC < 0)
-
-Look_at_proportions <- merge(number_CpG_per_gene_450, table(Genes_DMP_hyper$Blueprint_gene_names), by.x = "Var1", by.y = "Var1", all.x = TRUE) %>%
-  merge(., table(Genes_DMP_hypo$Blueprint_gene_names), by.x = "Var1", by.y = "Var1", all.x = TRUE)
-
-
-Look_at_proportions$Proportion_hyper <- Look_at_proportions$Freq.y / Look_at_proportions$Freq.x
-Look_at_proportions$Proportion_hypo <- Look_at_proportions$Freq / Look_at_proportions$Freq.x
-Look_at_proportions$DM <- if(Look_at_proportions$Proportion_hypo < Look_at_proportions$Proportion_hyper){
-  "Hyper"
-}else if(Look_at_proportions$Proportion_hypo > Look_at_proportions$Proportion_hyper){
-  "Hypo"
-}else{
-  NA
-}
-
+write.csv(Genes_hypermetylated_in_IDHm, file = paste0(Gene_lists_folder, "Genes_hypermetylated_in_IDHm_TCGA.csv"), row.names = FALSE)
+write.csv(Genes_hypermetylated_in_IDHm_enhancer, file = paste0(Gene_lists_folder,"Genes_hypermetylated_in_IDHm_TCGA_enhancer.csv"), row.names = FALSE)
+write.csv(Genes_hypermetylated_in_WT, file = paste0(Gene_lists_folder,"Genes_hypometylated_in_IDHm_TCGA.csv"), row.names = FALSE)
+write.csv(Genes_hypermetylated_in_WT, file = paste0(Gene_lists_folder,"Genes_hypometylated_in_IDHm_TCGA_enhancer.csv"), row.names = FALSE)
 ```
-
-
 
 ```{r}
 dotplot(Genes_hypermetylated_in_IDHm_ego, showCategory = 30, title = "Hypermet IDHm", font.size = 6)
@@ -569,7 +554,22 @@ Genes_hypermetylated_in_WT_promoter_and_enhancer_ego_whiele <- enrichGO(
   pAdjustMethod = "none", 
   universe = gene_universe_EPIC
 )
+```
 
+```{r}
+write.csv(Genes_hypermetylated_in_IDH2m_ego@result, file = paste0(GO_folder, "Genes_hypermetylated_in_IDH2m_Whiele_ego.csv"))
+write.csv(Genes_hypermetylated_in_IDH2m_enhancer_ego@result, file = paste0(GO_folder,"Genes_hypermetylated_in_IDH2m_Whiele_enhancer_ego.csv"))
+write.csv(Genes_hypermetylated_in_WT_whiele_ego@result, file = paste0(GO_folder,"Genes_hypometylated_in_IDH2m_whiele_ego.csv"))
+write.csv(Genes_hypermetylated_in_WT_enhancer_ego_whiele@result, file = paste0(GO_folder,"Genes_hypometylated_in_IDH2m_enhancer_ego_whiele.csv"))
+
+write.csv(Genes_hypermetylated_in_IDH2m, file = paste0(Gene_lists_folder, "Genes_hypermetylated_in_IDH2m_Whiele.csv"), row.names = FALSE)
+write.csv(Genes_hypermetylated_in_IDH2m_enhancer, file = paste0(Gene_lists_folder, "Genes_hypermetylated_in_IDH2m_enhancer_Whiele.csv"), row.names = FALSE)
+write.csv(Genes_hypermetylated_in_WT_whiele, file = paste0(Gene_lists_folder, "Genes_hypometylated_in_IDH2m_Whiele.csv"), row.names = FALSE)
+write.csv(Genes_hypermetylated_in_WT_enhancer_whiele, file = paste0(Gene_lists_folder, "Genes_hypometylated_in_IDH2m_enhancer_Whiele.csv"), row.names = FALSE)
+```
+
+
+```{r}
 dotplot(Genes_hypermetylated_in_IDH2m_ego, showCategory = 30, title = "Hypermet IDHm")
 dotplot(Genes_hypermetylated_in_IDH2m_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood IDHm", font.size = 9)
 dotplot(Genes_hypermetylated_in_IDH2m_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer IDHm")
@@ -598,7 +598,10 @@ volcanoplot_methylation(BMIQ_Whiele_analysis[["IDH2m-WT"]], match_hit_CpGs_Bluep
 ```{r}
 load("../DATA/Methyl_DATA_Wang_Feng.RData")
 Phenotype_cluster <- read.csv("../DATA/Wang_Feng_DATA/Clustering_Baseline_phenotype.csv")
+```
 
+
+```{r}
 DATA_for_PCA <- t(as.data.frame(BMIQ_Wang_Feng))
 res.pca <- PCA(DATA_for_PCA, ncp = 3, graph = TRUE)
 
@@ -1295,6 +1298,15 @@ Genes_hypermetylated_in_Non_responder_enhancer <- Look_at_genes_connected_to_CpG
                                                                                   matchit_Blueprint_Pchic,
                                                                                   match_hit_CpGs_Blueprint_promoter_EPIC)
 
+Genes_hypometylated_in_Non_responder <- Look_at_gene_with_CpGs_in_promoter(Response_diff_hypermet_in_Responder$ID, match_hit_CpGs_Blueprint_promoter_EPIC)
+
+Genes_hypometylated_in_Non_responder_enhancer <- Look_at_genes_connected_to_CpGs(Response_diff_hypermet_in_Responder$ID,
+                                                                                  matchit_CpGs_Pchic_EPIC, 
+                                                                                  pchic,
+                                                                                  matchit_Blueprint_Pchic,
+                                                                                  match_hit_CpGs_Blueprint_promoter_EPIC)
+
+
 Response_diff_hypermet_in_Baseline <- BMIQ_wang_feng_analysis[["Baseline-Control"]] %>% 
   dplyr::filter(., P.Value < 0.01) %>%
   dplyr::filter(., logFC > 0.3)
@@ -1316,7 +1328,7 @@ Genes_hypermetylated_in_Non_responder_ego <- enrichGO(
   gene = Genes_hypermetylated_in_Non_responder,
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
   pAdjustMethod = "none", 
   universe = gene_universe_EPIC
 )
@@ -1325,7 +1337,25 @@ Genes_hypermetylated_in_Non_responder_enhancer_ego <- enrichGO(
   gene = Genes_hypermetylated_in_Non_responder_enhancer,
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypometylated_in_Non_responder_ego <- enrichGO(
+  gene = Genes_hypometylated_in_Non_responder,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
+  pAdjustMethod = "none", 
+  universe = gene_universe_EPIC
+)
+
+Genes_hypometylated_in_Non_responder_enhancer_ego <- enrichGO(
+  gene = Genes_hypometylated_in_Non_responder_enhancer,
+  keyType = "SYMBOL",
+  OrgDb = "org.Hs.eg.db",
+  ont = "BP",
   pAdjustMethod = "none", 
   universe = gene_universe_EPIC
 )
@@ -1334,7 +1364,7 @@ Genes_hypermetylated_in_Baseline_ego <- enrichGO(
   gene = Genes_hypermetylated_in_Baseline,
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
   pAdjustMethod = "none", 
   universe = gene_universe_EPIC
 )
@@ -1343,7 +1373,7 @@ Genes_hypermetylated_in_Baseline_enhancer_ego <- enrichGO(
   gene = Genes_hypermetylated_in_Baseline_enhancer,
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
   pAdjustMethod = "none", 
   universe = gene_universe_EPIC
 )
@@ -1352,7 +1382,7 @@ Genes_hypermetylated_in_Non_responder_promoter_and_enhancer_ego <- enrichGO(
   gene = unique(c(Genes_hypermetylated_in_Non_responder, Genes_hypermetylated_in_Non_responder_enhancer)),
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
   pAdjustMethod = "none", 
   universe = gene_universe_EPIC
 )
@@ -1361,7 +1391,7 @@ Genes_hypermetylated_in_Baseline_promoter_and_enhancer_ego <- enrichGO(
   gene = unique(c(Genes_hypermetylated_in_Baseline, Genes_hypermetylated_in_Baseline_enhancer)),
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
   pAdjustMethod = "none", 
   universe = gene_universe_EPIC
 )
@@ -1376,8 +1406,20 @@ dotplot(Genes_hypermetylated_in_Baseline_ego, showCategory = 30, title = "Hyperm
 dotplot(Genes_hypermetylated_in_Baseline_enhancer_ego, showCategory = 30, title = "Hypermet Neighborhood Baseline")
 dotplot(Genes_hypermetylated_in_Baseline_promoter_and_enhancer_ego, showCategory = 30, title = "Prom & enhancer Baseline")
 
-
+write.csv(Genes_hypermetylated_in_Non_responder_ego@result, file = paste0(GO_folder, "Genes_hypermetylated_in_Non_responder_ego.csv"))
+write.csv(Genes_hypermetylated_in_Non_responder_enhancer_ego@result, file = paste0(GO_folder, "Genes_hypermetylated_in_Non_responder_enhancer_ego.csv"))
+write.csv(Genes_hypometylated_in_Non_responder_ego@result, file = paste0(GO_folder, "Genes_hypometylated_in_Non_responder_ego.csv"))
+write.csv(Genes_hypometylated_in_Non_responder_enhancer_ego@result, file = paste0(GO_folder, "Genes_hypometylated_in_Non_responder_enhancer_ego.csv"))
 ```
+
+```{r}
+write.csv(Genes_hypermetylated_in_Non_responder, file = paste0(Gene_lists_folder, "Genes_hypermetylated_in_Non_responder.csv"), row.names = FALSE)
+write.csv(Genes_hypermetylated_in_Non_responder_enhancer, file = paste0(Gene_lists_folder, "Genes_hypermetylated_in_Non_responder_enhancer.csv"), row.names = FALSE)
+write.csv(Genes_hypometylated_in_Non_responder, file = paste0(Gene_lists_folder, "Genes_hypometylated_in_Non_responder.csv"), row.names = FALSE)
+write.csv(Genes_hypometylated_in_Non_responder_enhancer, file = paste0(Gene_lists_folder, "Genes_hypometylated_in_Non_responder_enhancer.csv"), row.names = FALSE)
+```
+
+
 
 ### Volcano plots
 
