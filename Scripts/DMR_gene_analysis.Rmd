@@ -29,24 +29,16 @@ DMR_analysis_IDHm_vs_IDHwt <- Genes_DMR_analysis(DMR_IDHm_IDHwt_TCGA)
 DMR_analysis_IDHm_vs_IDHwt$GO_hypermeth@result
 
 message("Genes hypermethylated")
-Gene_hypermeth <- DMR_analysis_IDHm_vs_IDHwt$GO_hypermeth@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene_hypermeth <- DMR_analysis_IDHm_vs_IDHwt$Genes_hypermethylated
 Gene_hypermeth
 
 DMR_analysis_IDHm_vs_IDHwt$GO_hypometh@result
 
 message("Genes hypomethylated")
-Gene_hypometh <- DMR_analysis_IDHm_vs_IDHwt$GO_hypometh@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene_hypometh <- DMR_analysis_IDHm_vs_IDHwt$Genes_hypomethylated
 Gene_hypometh
+
+write.csv(Gene_hypermeth, file = "../Results/Gene_hypermeth_TCGA.csv", row.names = FALSE)
 ```
 
 
@@ -56,7 +48,7 @@ Gene_hypometh
 GO_hyper_stress_auto <- DMR_analysis_IDHm_vs_IDHwt$GO_hypermeth@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hyper_stress_auto
-Gene_stress_auto_hypermeth <- GO_hyper_stress_auto %>% 
+Gene_stress_auto_hypermeth <- GO_hyper_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -70,7 +62,7 @@ Gene_stress_auto_hypermeth_TCGA
 GO_hypo_stress_auto <- DMR_analysis_IDHm_vs_IDHwt$GO_hypometh@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hypo_stress_auto
-Gene_stress_auto_hypometh <- GO_hypo_stress_auto %>% 
+Gene_stress_auto_hypometh <- GO_hypo_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -80,32 +72,26 @@ Gene_stress_auto_hypometh <- GO_hypo_stress_auto %>%
 message("Genes hypomethylated in autophagy & stress pathways")
 Gene_stress_auto_hypometh_TCGA <- Gene_stress_auto_hypometh
 Gene_stress_auto_hypometh_TCGA
+
+write.csv(Gene_stress_auto_hypermeth_TCGA, file = "../Results/Gene_stress_auto_hypermeth_TCGA.csv", row.names = FALSE)
 ```
 
-### Global results on enhancer 
+### Global results on enhancer
 
 ```{r}
 DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypermeth@result
 
 message("Genes hypermethylated")
-Gene_enh_hypermeth <- DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypermeth@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene_enh_hypermeth <- DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hyper
 Gene_enh_hypermeth
 
 DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypometh@result
 
 message("Genes hypomethylated")
-Gene__enh_hypometh <- DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypometh@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene__enh_hypometh <- DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hypo
 Gene__enh_hypometh
+
+write.csv(Gene_enh_hypermeth, file = "../Results/Genes_hyper_enh_TCGA.csv", row.names = FALSE)
 ```
 
 
@@ -115,7 +101,7 @@ Gene__enh_hypometh
 GO_hyper_enh_stress_auto <- DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypermeth@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hyper_enh_stress_auto
-Gene_enh_stress_auto_hypermeth <- GO_hyper_enh_stress_auto %>% 
+Gene_enh_stress_auto_hypermeth <- GO_hyper_enh_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -130,7 +116,7 @@ Gene_enh_stress_auto_hypermeth_TCGA
 GO_hypo_enh_stress_auto <- DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypometh@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hypo_enh_stress_auto
-Gene_enh_stress_auto_hypometh <- GO_hypo_enh_stress_auto %>% 
+Gene_enh_stress_auto_hypometh <- GO_hypo_enh_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -141,6 +127,59 @@ message("Genes hypomethylated in autophagy & stress pathways")
 Gene_enh_stress_auto_hypometh_TCGA <- Gene_enh_stress_auto_hypometh
 Gene_enh_stress_auto_hypometh_TCGA
 
+write.csv(Gene_enh_stress_auto_hypermeth_TCGA, file = "../Results/Gene_enh_stress_auto_hypermeth_TCGA.csv", row.names = FALSE)
+```
+
+
+## DMP analysis
+
+```{r}
+BMIQ_CD34_IDHm_WT_DMP_analysis <- merge(BMIQ_CD34_IDHm_WT, match_hit_CpGs_Blueprint_promoter_450, by.x = 0, by.y = "CpG") %>% dplyr::select(., c(1:53)) %>% unique(.) %>% dplyr::filter(., Blueprint_gene_names != "")
+
+BMIQ_CD34_IDHm_WT_DMP_analysis$IDHm <- rowMeans(BMIQ_CD34_IDHm_WT_DMP_analysis[,seq(2,52)[Phenotype_BMIQ_CD34_IDHm_WT$Phenotype == "IDHm"]])
+
+BMIQ_CD34_IDHm_WT_DMP_analysis$WT <- rowMeans(BMIQ_CD34_IDHm_WT_DMP_analysis[,seq(2,52)[Phenotype_BMIQ_CD34_IDHm_WT$Phenotype == "WT"]])
+
+BMIQ_CD34_IDHm_WT_DMP_analysis <- BMIQ_CD34_IDHm_WT_DMP_analysis %>% dplyr::select(., c(1, 53:55)) %>%
+  dplyr::filter(., Blueprint_gene_names != "")
+```
+
+```{r}
+gene_cpgs_splitted <- split(BMIQ_CD34_IDHm_WT_DMP_analysis[,c(2:4)], BMIQ_CD34_IDHm_WT_DMP_analysis$Blueprint_gene_names)
+```
+
+```{r}
+Gene_promoter_global_methylation <- lapply(gene_cpgs_splitted, function(x){
+  if(length(x$IDHm) > 1) {
+    IDHm <- mean(x[,2])
+    WT <- mean(x[,3])
+  }else{
+    IDHm <- x[,2]
+    WT <- x[,3]
+  }
+  return(data.frame(
+    IDHm = IDHm,
+    WT = WT,
+    Delta = IDHm-WT
+  ))
+})
+```
+
+```{r}
+all_Genes_globally_differentially_methylated <- list.filter(Gene_promoter_global_methylation, Delta >=0.3) %>% names(.)
+
+Genes_hyper_in_IDHm <- list.filter(Gene_promoter_global_methylation, IDHm >=0.6) %>% names(.)
+
+Genes_hyper_in_IDHwt <- list.filter(Gene_promoter_global_methylation, WT >=0.6) %>% names(.)
+
+Genes_hypo_in_IDHm <- list.filter(Gene_promoter_global_methylation, IDHm <0.3) %>% names(.)
+
+Genes_hypo_in_IDHwt <- list.filter(Gene_promoter_global_methylation, WT <0.3) %>% names(.)
+
+Genes_hyper_in_IDHm_not_in_IDHwt <- Genes_hyper_in_IDHm[Genes_hyper_in_IDHm %ni% Genes_hyper_in_IDHwt]
+intersect(Genes_hyper_in_IDHm_not_in_IDHwt, Genes_hypo_in_IDHwt)
+
+write.csv(Genes_hyper_in_IDHm_not_in_IDHwt,file = "../Results/Genes_hyper_in_IDHm_not_in_IDHwt_DMP.csv", row.names = FALSE)
 ```
 
 
@@ -178,23 +217,13 @@ DMR_analysis_Whiele <- Genes_DMR_analysis(DMR_IDH2m_IDHwt_Whiele, gene_universe 
 DMR_analysis_Whiele$GO_hypermeth@result
 
 message("Genes hypermethylated")
-Gene_hypermeth <- DMR_analysis_Whiele$GO_hypermeth@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene_hypermeth <- DMR_analysis_Whiele$Genes_hypermethylated
 Gene_hypermeth
 
 DMR_analysis_Whiele$GO_hypometh@result
 
 message("Genes hypomethylated")
-Gene_hypometh <- DMR_analysis_Whiele$GO_hypometh@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene_hypometh <- DMR_analysis_Whiele$Genes_hypomethylated
 Gene_hypometh
 ```
 
@@ -205,7 +234,7 @@ Gene_hypometh
 GO_hyper_stress_auto <- DMR_analysis_Whiele$GO_hypermeth@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hyper_stress_auto
-Gene_stress_auto_hypermeth <- GO_hyper_stress_auto %>% 
+Gene_stress_auto_hypermeth <- GO_hyper_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -219,7 +248,7 @@ Gene_stress_auto_hypermeth_Whiele <- Gene_stress_auto_hypermeth
 GO_hypo_stress_auto <- DMR_analysis_Whiele$GO_hypometh@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hypo_stress_auto
-Gene_stress_auto_hypometh <- GO_hypo_stress_auto %>% 
+Gene_stress_auto_hypometh <- GO_hypo_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -231,29 +260,19 @@ Gene_stress_auto_hypometh_Whiele <- Gene_stress_auto_hypometh
 
 ```
 
-### Global results on enhancer 
+### Global results on enhancer
 
 ```{r}
 DMR_analysis_Whiele$GO_enh_hypermeth@result
 
 message("Genes hypermethylated")
-Gene_enh_hypermeth <- DMR_analysis_Whiele$GO_enh_hypermeth@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene_enh_hypermeth <- DMR_analysis_Whiele$Genes_enh_hyper
 Gene_enh_hypermeth
 
 DMR_analysis_Whiele$GO_enh_hypometh@result
 
 message("Genes hypomethylated")
-Gene__enh_hypometh <- DMR_analysis_Whiele$GO_enh_hypometh@result %>% 
-  dplyr::select(., geneID) %>%
-  .[,1] %>%
-  str_split(., "/") %>%
-  unlist(.) %>%
-  unique(.)
+Gene__enh_hypometh <- DMR_analysis_Whiele$Genes_enh_hypo
 Gene__enh_hypometh
 ```
 
@@ -264,7 +283,7 @@ Gene__enh_hypometh
 GO_hyper_enh_stress_auto <- DMR_analysis_Whiele$GO_enh_hypermeth@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hyper_enh_stress_auto
-Gene_enh_stress_auto_hypermeth <- GO_hyper_enh_stress_auto %>% 
+Gene_enh_stress_auto_hypermeth <- GO_hyper_enh_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -278,7 +297,7 @@ Gene_enh_stress_auto_hypermeth_Whiele <- Gene_enh_stress_auto_hypermeth
 GO_hypo_enh_stress_auto <- DMR_analysis_Whiele$GO_enh_hypometh@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hypo_enh_stress_auto
-Gene_enh_stress_auto_hypometh <- GO_hypo_enh_stress_auto %>% 
+Gene_enh_stress_auto_hypometh <- GO_hypo_enh_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -323,7 +342,7 @@ DMR_analysis_Koichi <- Genes_DMR_analysis(DMR_Res_vs_NonRes_Koichi, gene_univers
 DMR_analysis_Koichi$GO_hypermeth@result
 
 message("Genes hypermethylated")
-Gene_hypermeth <- DMR_analysis_Koichi$GO_hypermeth@result %>% 
+Gene_hypermeth <- DMR_analysis_Koichi$GO_hypermeth@result %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -334,7 +353,7 @@ Gene_hypermeth
 DMR_analysis_Koichi$GO_hypometh@result
 
 message("Genes hypomethylated")
-Gene_hypometh <- DMR_analysis_Koichi$GO_hypometh@result %>% 
+Gene_hypometh <- DMR_analysis_Koichi$GO_hypometh@result %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -350,7 +369,7 @@ Gene_hypometh
 GO_hyper_stress_auto <- DMR_analysis_Koichi$GO_hypermeth@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hyper_stress_auto
-Gene_stress_auto_hypermeth <- GO_hyper_stress_auto %>% 
+Gene_stress_auto_hypermeth <- GO_hyper_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -364,7 +383,7 @@ Gene_stress_auto_hypermeth_Koichi <- Gene_stress_auto_hypermeth
 GO_hypo_stress_auto <- DMR_analysis_Koichi$GO_hypometh@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hypo_stress_auto
-Gene_stress_auto_hypometh <- GO_hypo_stress_auto %>% 
+Gene_stress_auto_hypometh <- GO_hypo_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -376,13 +395,13 @@ Gene_stress_auto_hypometh_Koichi <- Gene_stress_auto_hypometh
 
 ```
 
-### Global results on enhancer 
+### Global results on enhancer
 
 ```{r}
 DMR_analysis_Koichi$GO_enh_hypermeth@result
 
 message("Genes hypermethylated")
-Gene_enh_hypermeth <- DMR_analysis_Koichi$GO_enh_hypermeth@result %>% 
+Gene_enh_hypermeth <- DMR_analysis_Koichi$GO_enh_hypermeth@result %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -393,7 +412,7 @@ Gene_enh_hypermeth
 DMR_analysis_Koichi$GO_enh_hypometh@result
 
 message("Genes hypomethylated")
-Gene__enh_hypometh <- DMR_analysis_Koichi$GO_enh_hypometh@result %>% 
+Gene__enh_hypometh <- DMR_analysis_Koichi$GO_enh_hypometh@result %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -409,7 +428,7 @@ Gene__enh_hypometh
 GO_hyper_enh_stress_auto <- DMR_analysis_Koichi$GO_enh_hypermeth@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hyper_enh_stress_auto
-Gene_enh_stress_auto_hypermeth <- GO_hyper_enh_stress_auto %>% 
+Gene_enh_stress_auto_hypermeth <- GO_hyper_enh_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -423,7 +442,7 @@ Gene_enh_stress_auto_hypermeth_Koichi <- Gene_enh_stress_auto_hypermeth
 GO_hypo_enh_stress_auto <- DMR_analysis_Koichi$GO_enh_hypometh@result %>%
   dplyr::filter(., str_detect(Description, "autophagy") | str_detect(Description, "stress"))
 GO_hypo_enh_stress_auto
-Gene_enh_stress_auto_hypometh <- GO_hypo_enh_stress_auto %>% 
+Gene_enh_stress_auto_hypometh <- GO_hypo_enh_stress_auto %>%
   dplyr::select(., geneID) %>%
   .[,1] %>%
   str_split(., "/") %>%
@@ -437,31 +456,31 @@ Gene_enh_stress_auto_hypometh_Koichi <- Gene_enh_stress_auto_hypometh
 
 # Resume of foundings
 
-## Genes methylation 
+## Genes methylation
 
 ```{r}
 Genes_hypermeth <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$Genes_hypermethylated,
-  Whiele = DMR_analysis_Whiele$Genes_hypermethylated,
-  Koichi = DMR_analysis_Koichi$Genes_hypermethylated
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$Genes_hypermethylated),
+  Whiele = unique(DMR_analysis_Whiele$Genes_hypermethylated),
+  Koichi = unique(DMR_analysis_Koichi$Genes_hypermethylated)
 )
 
 Genes_hypermeth_enh <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hyper,
-  Whiele = DMR_analysis_Whiele$Genes_enh_hyper,
-  Koichi = DMR_analysis_Koichi$Genes_enh_hyper
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hyper),
+  Whiele = unique(DMR_analysis_Whiele$Genes_enh_hyper),
+  Koichi = unique(DMR_analysis_Koichi$Genes_enh_hyper)
 )
 
 Genes_hypometh <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$Genes_hypomethylated,
-  Whiele = DMR_analysis_Whiele$Genes_hypomethylated,
-  Koichi = DMR_analysis_Koichi$Genes_hypomethylated
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$Genes_hypomethylated),
+  Whiele = unique(DMR_analysis_Whiele$Genes_hypomethylated),
+  Koichi = unique(DMR_analysis_Koichi$Genes_hypomethylated)
 )
 
 Genes_hypometh_enh <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hypo,
-  Whiele = DMR_analysis_Whiele$Genes_enh_hypo,
-  Koichi = DMR_analysis_Koichi$Genes_enh_hypo
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hypo),
+  Whiele = unique(DMR_analysis_Whiele$Genes_enh_hypo),
+  Koichi = unique(DMR_analysis_Koichi$Genes_enh_hypo)
 )
 ```
 
@@ -472,25 +491,25 @@ myCol <- brewer.pal(3, "Pastel2")
 
 venn.diagram(Genes_hypermeth,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/Genes_hypermethylated_Venn_diagram.png",
              fill = myCol)
 
 venn.diagram(Genes_hypermeth_enh,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/Genes_hypermethylated_enhancer_Venn_diagram.png",
              fill = myCol)
 
 venn.diagram(Genes_hypometh,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/Genes_hypomethylated_Venn_diagram.png",
              fill = myCol)
 
 venn.diagram(Genes_hypometh_enh,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/Genes_hypomethylated_enhancer_Venn_diagram.png",
              fill = myCol)
 ```
@@ -499,28 +518,28 @@ venn.diagram(Genes_hypometh_enh,
 
 ```{r}
 GO_pathway_hyper <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$GO_hypermeth@result$Description,
-  Whiele = DMR_analysis_Whiele$GO_hypermeth@result$Description,
-  Koichi = DMR_analysis_Koichi$GO_hypermeth@result$Description
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$GO_hypermeth@result$Description),
+  Whiele = unique(DMR_analysis_Whiele$GO_hypermeth@result$Description),
+  Koichi = unique(DMR_analysis_Koichi$GO_hypermeth@result$Description)
 )
 
 GO_pathway_hyper_enh <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypermeth@result$Description,
-  Whiele = DMR_analysis_Whiele$GO_enh_hypermeth@result$Description,
-  Koichi = DMR_analysis_Koichi$GO_enh_hypermeth@result$Description
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypermeth@result$Description),
+  Whiele = unique(DMR_analysis_Whiele$GO_enh_hypermeth@result$Description),
+  Koichi = unique(DMR_analysis_Koichi$GO_enh_hypermeth@result$Description)
 )
 
 
 GO_pathway_hypo <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$GO_hypometh@result$Description,
-  Whiele = DMR_analysis_Whiele$GO_hypometh@result$Description,
-  Koichi = DMR_analysis_Koichi$GO_hypometh@result$Description
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$GO_hypometh@result$Description),
+  Whiele = unique(DMR_analysis_Whiele$GO_hypometh@result$Description),
+  Koichi = unique(DMR_analysis_Koichi$GO_hypometh@result$Description)
 )
 
 GO_pathway_hypo_enh <- list(
-  TCGA = DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypometh@result$Description,
-  Whiele = DMR_analysis_Whiele$GO_enh_hypometh@result$Description,
-  Koichi = DMR_analysis_Koichi$GO_enh_hypometh@result$Description
+  TCGA = unique(DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypometh@result$Description),
+  Whiele = unique(DMR_analysis_Whiele$GO_enh_hypometh@result$Description),
+  Koichi = unique(DMR_analysis_Koichi$GO_enh_hypometh@result$Description)
 )
 
 ```
@@ -528,25 +547,25 @@ GO_pathway_hypo_enh <- list(
 ```{r}
 venn.diagram(GO_pathway_hyper,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/GO_hypermethylated_Venn_diagram.png",
              fill = myCol)
 
 venn.diagram(GO_pathway_hyper_enh,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/GO_hypermethylated_enhancer_Venn_diagram.png",
              fill = myCol)
 
 venn.diagram(GO_pathway_hypo,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/GO_hypomethylated_Venn_diagram.png",
              fill = myCol)
 
 venn.diagram(GO_pathway_hypo_enh,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/GO_hypomethylated_enhancer_Venn_diagram.png",
              fill = myCol)
 ```
@@ -581,26 +600,26 @@ Genes_hypometh_enh <- list(
 ```{r}
 venn.diagram(Genes_hypermeth,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/Genes_hyper_stress_auto.png",
              fill = myCol)
 
 venn.diagram(Genes_hypermeth_enh,
              category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
+             output = FALSE,
              filename = "../Results/Genes_enh_hyper_stress_auto.png",
              fill = myCol)
 
-venn.diagram(Genes_hypometh,
-             category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
-             filename = "../Results/Genes_hypo_stress_auto.png",
-             fill = myCol)
+#venn.diagram(Genes_hypometh,
+#             category.names = c("TCGA", "Whiele", "Koichi"),
+#             output = TRUE,
+#             filename = "../Results/Genes_hypo_stress_auto.png",
+#             fill = myCol)
 
-venn.diagram(Genes_hypometh_enh,
-             category.names = c("TCGA", "Whiele", "Koichi"),
-             output = TRUE,
-             filename = "../Results/Genes_enh_hypo_stress_auto.png",
-             fill = myCol)
+#venn.diagram(Genes_hypometh_enh,
+#             category.names = c("TCGA", "Whiele", "Koichi"),
+#             output = TRUE,
+#             filename = "../Results/Genes_enh_hypo_stress_auto.png",
+#             fill = myCol)
 ```
 
