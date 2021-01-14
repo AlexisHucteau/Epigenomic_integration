@@ -941,3 +941,97 @@ look_at_neighborhood <- function(match_hit_DMR, pchic){
   
   return(neighbor)
 }
+
+
+T_test_on_methylation_promoter <- function(BMIQ, match_hit_CpGs_Blueprint_promoter = match_hit_CpGs_Blueprint_promoter_450, Phenotype, comparison){
+  message("Starting ....")
+  match_hit_CpGs_Blueprint_promoter <- match_hit_CpGs_Blueprint_promoter[,c(1,4)]
+  message(" == Merging Data with Blueprint annotation == ")
+  BMIQ_DMP_analysis <- merge(BMIQ, match_hit_CpGs_Blueprint_promoter, by.x = 0, by.y = "CpG") %>% unique(.) %>% dplyr::filter(., Blueprint_gene_names != "")
+  Gene_promoter_methylation_state <- split(BMIQ_DMP_analysis, BMIQ_DMP_analysis$Blueprint_gene_names)
+  message(" == Calculating Average CpGs Bvalue per Genes == ")
+  Gene_promoter_global_methylation <- lapply(Gene_promoter_methylation_state, function(x){
+    nbcolumn <- length(colnames(x)) - 1
+    if(length(x$Row.names) >1){
+      tmp <- x[,c(2:nbcolumn)] %>% as.matrix(.) %>% colMeans2(.) %>% data.frame(.) %>% t(.)
+      colnames(tmp) <- colnames(x)[c(2:nbcolumn)]
+      tmp <- as.data.frame(tmp)
+    }else{
+      tmp <- x[,c(2:nbcolumn)]
+    }
+    row.names(tmp) <- "Means_Bvalues"
+    tmp
+  })
+  
+  A <- Phenotype$Phenotype == comparison[1]
+  B <- Phenotype$Phenotype == comparison[2]
+  
+  message(" == t.test on each gene through all samples == ")
+  
+  test_t.student <- lapply(Gene_promoter_global_methylation, function(x){
+    t.test(x[,A], x[,B])
+  })
+  
+  Genes_significally_hyper <- list.filter(test_t.student, p.value < 0.1 & (estimate[1] - estimate[2]) > 0)
+  Genes_significally_hypo <- list.filter(test_t.student, p.value < 0.1 & (estimate[2] - estimate[1]) > 0)
+  
+  Genes_hyper <- names(Genes_significally_hyper) %>% unique(.)
+  Genes_hypo <- names(Genes_significally_hypo) %>% unique(.)
+  Gene_universe <- names(test_t.student) %>% unique(.)
+  
+  message(paste0(length(Genes_hyper), " genes significantly hypermethylated found !"))
+  message(paste0(length(Genes_hypo), " genes significantly hypomethylated found !"))
+  
+  res <- list()
+  res[["test_t.student"]] <- test_t.student
+  res[["Genes_significally_Hyper"]] <- Genes_significally_hyper
+  res[["Genes_significally_Hypo"]] <- Genes_significally_hypo
+  
+  message(" == Gene ontology analysis == ")
+  
+  Genes_hyper_ego <- enrichGO(
+    gene = Genes_hyper,
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = Gene_universe
+  )
+  
+  Genes_hypo_ego <- enrichGO(
+    gene = Genes_hypo,
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = Gene_universe
+  ) 
+  
+  res[["Genes_hypermet"]] <- Genes_hyper
+  res[["Genes_hypomet"]] <- Genes_hypo
+  res[["Genes_universe"]] <- Gene_universe
+  res[["GO_hyper"]] <- Genes_hyper_ego
+  res[["GO_hypo"]] <- Genes_hypo_ego
+  
+  return(res)
+}
+
+Visualize_Ttest_results <- function(Ttest_Results, dataname){
+  write.csv(Ttest_Results$Genes_hypermet, file = paste0(Gene_lists_folder, dataname, "_T_Hypermet.test.csv"), row.names = FALSE)
+  write.csv(Ttest_Results$Genes_hypomet, file = paste0(Gene_lists_folder,  dataname, "_T_Hypomet.test.csv"), row.names = FALSE)
+  write.csv(Ttest_Results$Genes_universe, file = paste0(Gene_lists_folder,  dataname, "_gene_universe.csv"), row.names = FALSE)
+  if("GO_hyper" %in% names(Ttest_Results)){
+    write.csv(Ttest_Results$GO_hyper@result, file = paste0(GO_folder,  dataname, "_Ttest_hyper.csv"))
+    auto_stress_pathways <- Ttest_Results$GO_hyper@result %>%
+      dplyr::filter(., str_detect(Description, "metabolism") | str_detect(Description, "stress"))
+    write.csv(auto_stress_pathways, file = paste0(GO_folder, dataname, "_stress_metabolism_pathway_hyper.csv"))
+    message(" GO hypermeth written ")
+    }
+  if("GO_hypo" %in% names(Ttest_Results)){
+    write.csv(Ttest_Results$GO_hypo@result, file = paste0(GO_folder,  dataname, "_Ttest_hypo.csv"))
+    auto_stress_pathways <- Ttest_Results$GO_hypo@result %>%
+      dplyr::filter(., str_detect(Description, "metabolism") | str_detect(Description, "stress"))
+    write.csv(auto_stress_pathways, file = paste0(GO_folder, dataname, "_stress_metabolism_pathway_hypo.csv"))
+    message(" GO hypometh written ")
+    }
+}

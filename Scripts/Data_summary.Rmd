@@ -143,6 +143,8 @@ number_CpG_per_gene_EPIC <- table(match_hit_CpGs_Blueprint_promoter_EPIC$Bluepri
 
 Gene_lists_folder <- "../Results/Tables report/Gene lists/"
 GO_folder <- "../Results/Tables report/GO/"
+
+rm(overlaps_Blueprint_Pchic, overlaps_CpGs_Pchic_EPIC, overlaps_CpGs_Blueprint_EPIC, overlaps_CpGs_Pchic_450, overlaps_CpGs_Blueprint_450)
 ```
 
 # TCGA
