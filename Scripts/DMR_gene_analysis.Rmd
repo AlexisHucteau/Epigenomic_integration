@@ -19,6 +19,15 @@ DMR_IDHm_IDHwt_TCGA <- readRDS("../Results/DMR_TCGA.rds")
 
 ```{r}
 DMR_analysis_IDHm_vs_IDHwt <- Genes_DMR_analysis(DMR_IDHm_IDHwt_TCGA)
+
+GO_no_TNF <- DMR_analysis_IDHm_vs_IDHwt$Genes_hypermethylated %>% .[. != "TNF"] %>% enrichGO(.,
+                                                                                             keyType = "SYMBOL",
+                                                                                             OrgDb = "org.Hs.eg.db",
+                                                                                             ont = "BP",
+                                                                                             pAdjustMethod = "none", 
+                                                                                             universe = gene_universe_450K)
+
+
 ```
 
 ## Results
@@ -35,6 +44,9 @@ Gene_hypometh <- DMR_analysis_IDHm_vs_IDHwt$Genes_hypomethylated
 Gene_hypometh
 
 write.csv(Gene_hypermeth, file = "../Results/Gene_hypermeth_TCGA.csv", row.names = FALSE)
+write.csv(Gene_hypometh, file = "../Results/Gene_hypometh_TCGA.csv", row.names = FALSE)
+write.csv(DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hyper, file = "../Results/Gene_hyper_enh_TCGA.csv", row.names = FALSE)
+write.csv(DMR_analysis_IDHm_vs_IDHwt$Genes_enh_hypo, file = "../Results/Gene_hypo_enh_TCGA.csv", row.names = FALSE)
 ```
 
 
@@ -67,7 +79,12 @@ message("Genes hypomethylated in metabolism & stress pathways")
 Gene_stress_auto_hypometh_TCGA <- Gene_stress_auto_hypometh
 Gene_stress_auto_hypometh_TCGA
 
-write.csv(Gene_stress_auto_hypermeth_TCGA, file = "../Results/Gene_stress_metabo_hypermeth_TCGA.csv", row.names = FALSE)
+write.csv(DMR_analysis_IDHm_vs_IDHwt$GO_hypermeth@result, file = paste0(GO_folder, "GO_DMR_TCGA_hyper.csv"))
+write.csv(DMR_analysis_IDHm_vs_IDHwt$GO_hypometh@result, file = paste0(GO_folder, "GO_DMR_TCGA_hypo.csv"))
+write.csv(DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypermeth@result, file = paste0(GO_folder, "GO_DMR_TCGA_hyper_enh.csv"))
+write.csv(DMR_analysis_IDHm_vs_IDHwt$GO_enh_hypometh@result, file = paste0(GO_folder, "GO_DMR_TCGA_hypo_enh.csv"))
+
+
 ```
 
 ### Global results on enhancer
@@ -134,6 +151,24 @@ dotplot(TCGA_T.test_analysis$GO_hyper, showCategory = 30, title = "Hypermet")
 saveRDS(TCGA_T.test_analysis, file = "../Results/TCGA_T.test_analysis.rds")
 
 TCGA_T.test_analysis$GO_hyper
+
+TCGA_T.test_analysis$Genes_hypermet_rank <- list.select(TCGA_T.test_analysis$Genes_significally_Hyper, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
+
+TCGA_T.test_analysis$Genes_hypermet_rank %>% .[order(.$p.value),] %>% write.csv(., file = paste0(Gene_lists_folder, "TCGA_T.test_analysis_Genes_hypermet_rank.csv"), row.names = FALSE)
+
+TCGA_T.test_analysis$Genes_hypomet_rank <- list.select(TCGA_T.test_analysis$Genes_significally_Hypo, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
+
+TCGA_T.test_analysis$Genes_hypomet_rank %>% .[order(.$p.value),] %>% write.csv(., file = paste0(Gene_lists_folder, "TCGA_T.test_analysis_Genes_hypomet_rank.csv"), row.names = FALSE)
+
+
 ```
 
 # DMR Whiele Analysis
@@ -175,6 +210,12 @@ Gene_hypermeth
 message("Genes hypomethylated")
 Gene_hypometh <- DMR_analysis_Whiele$Genes_hypomethylated
 Gene_hypometh
+
+write.csv(DMR_analysis_Whiele$Genes_hypermethylated, file = "../Results/Genes_hyper_Whiele.csv", row.names = FALSE)
+write.csv(DMR_analysis_Whiele$Genes_hypomethylated, file = "../Results/Genes_hypo_Whiele.csv", row.names = FALSE)
+write.csv(DMR_analysis_Whiele$Genes_enh_hyper, file = "../Results/Genes_hyper_enh_Whiele.csv", row.names = FALSE)
+write.csv(DMR_analysis_Whiele$Genes_enh_hypo, file = "../Results/Genes_hypo_enh_Whiele.csv", row.names = FALSE)
+
 ```
 
 
@@ -262,6 +303,22 @@ Whiele_T.test_analysis <- T_test_on_methylation_promoter(BMIQ_Whiele, match_hit_
 Visualize_Ttest_results(Whiele_T.test_analysis, "Whiele")
 
 dotplot(Whiele_T.test_analysis$GO_hyper, showCategory = 30, title = "Hypermet")
+
+Whiele_T.test_analysis$Genes_hypermet_rank <- list.select(Whiele_T.test_analysis$Genes_significally_Hyper, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
+
+Whiele_T.test_analysis$Genes_hypermet_rank %>% .[order(.$p.value),] %>% write.csv(., file = paste0(Gene_lists_folder, "Whiele_T.test_analysis_Genes_hypermet_rank.csv"), row.names = FALSE)
+
+Whiele_T.test_analysis$Genes_hypomet_rank <- list.select(Whiele_T.test_analysis$Genes_significally_Hypo, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
+
+Whiele_T.test_analysis$Genes_hypomet_rank %>% .[order(.$p.value),] %>% write.csv(., file = paste0(Gene_lists_folder, "Whiele_T.test_analysis_Genes_hypomet_rank.csv"), row.names = FALSE)
 ```
 
 
@@ -408,9 +465,25 @@ Gene_enh_stress_auto_hypometh_Koichi <- Gene_enh_stress_auto_hypometh
 ```{r}
 #load("../DATA/Methyl_DATA_Wang_Feng.RData")
 
-Koichi_T.test_analysis <- T_test_on_methylation_promoter(BMIQ_Wang_Feng, match_hit_CpGs_Blueprint_promoter_EPIC, Phenotype_Wang_Feng, c("Non_Responder", "Responder"))
+BMIQ_RESPONSES <- BMIQ_Wang_Feng[,str_detect(Phenotype_Wang_Feng$Phenotype, "esponder")]
+
+Phenotype_Responses <- Phenotype_Wang_Feng[str_detect(Phenotype_Wang_Feng$Phenotype, "esponder"),]
+
+Koichi_T.test_analysis <- T_test_on_methylation_promoter(BMIQ_RESPONSES, match_hit_CpGs_Blueprint_promoter_EPIC, Phenotype_Responses, c("Non_Responder", "Responder"))
 
 Visualize_Ttest_results(Koichi_T.test_analysis, "Koichi")
+
+Koichi_T.test_analysis$Genes_hypermet_rank <- list.select(Koichi_T.test_analysis$Genes_significally_Hyper, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
+
+Koichi_T.test_analysis$Genes_hypomet_rank <- list.select(Koichi_T.test_analysis$Genes_significally_Hypo, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
 
 dotplot(Koichi_T.test_analysis$GO_hyper, showCategory = 30, title = "Hypermet")
 dotplot(Koichi_T.test_analysis$GO_hypo, showCategory = 30, title = "Hypomet")

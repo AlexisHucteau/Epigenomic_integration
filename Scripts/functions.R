@@ -824,17 +824,19 @@ Genes_DMR_analysis <- function(DMR_analysis, gene_universe = gene_universe_450K)
   overlaps <- findOverlaps(Blueprint_Granges, DMR_Grange)
   match_hit <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps),]),
                           data.frame(mcols(DMR_Grange[subjectHits(overlaps),]))) %>%
-    dplyr::filter(., type == "P")
+    dplyr::filter(., type == "P" & P.value < 0.01)
   message(paste0(length(rownames(match_hit)), " fragments found"))
   Genes_hyper <- match_hit %>%
     dplyr::filter(., Value < 0) %>%
     dplyr::select(., Blueprint_gene_names) %>%
-    .$Blueprint_gene_names
+    .$Blueprint_gene_names %>%
+    unique(.)
   message(paste0(length(Genes_hyper), " genes hypermethylated"))
   Genes_hypo <- match_hit %>%
     dplyr::filter(., Value > 0) %>%
     dplyr::select(., Blueprint_gene_names) %>%
-    .$Blueprint_gene_names
+    .$Blueprint_gene_names %>%
+    unique(.)
   message(paste0(length(Genes_hypo), " genes hypomethylated"))
   
   message("=================== Gene ontology analysis ======================")
@@ -856,6 +858,7 @@ Genes_DMR_analysis <- function(DMR_analysis, gene_universe = gene_universe_450K)
     universe = gene_universe
   )
   
+  res[["DMR overlapping"]] <- match_hit
   res[["Genes_hypermethylated"]] <- Genes_hyper
   res[["Genes_hypomethylated"]] <- Genes_hypo
   res[["GO_hypermeth"]] <- Genes_hypermetylated_ego
@@ -907,6 +910,13 @@ Genes_DMR_analysis <- function(DMR_analysis, gene_universe = gene_universe_450K)
     pAdjustMethod = "none", 
     universe = gene_universe
   )
+  Genes_DMR_enh_ego <- c(genes_enh_hypo, genes_enh_hyper) %>% unique(.) %>% enrichGO(.,
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = gene_universe
+  )
   
   res[["neighbor_genes_hyper"]] <- neighbor_genes_hyper
   res[["neighbor_genes_hypo"]] <- neighbor_genes_hypo
@@ -914,6 +924,7 @@ Genes_DMR_analysis <- function(DMR_analysis, gene_universe = gene_universe_450K)
   res[["Genes_enh_hypo"]] <- genes_enh_hypo
   res[["GO_enh_hypermeth"]] <- Genes_hypermetylated_ego
   res[["GO_enh_hypometh"]] <- Genes_hypometylated_ego
+  res[["GO_DMR_enh"]] <- Genes_DMR_enh_ego
   
   return(res)
 }
@@ -972,8 +983,8 @@ T_test_on_methylation_promoter <- function(BMIQ, match_hit_CpGs_Blueprint_promot
     t.test(x[,A], x[,B])
   })
   
-  Genes_significally_hyper <- list.filter(test_t.student, p.value < 0.1 & (estimate[1] - estimate[2]) > 0)
-  Genes_significally_hypo <- list.filter(test_t.student, p.value < 0.1 & (estimate[2] - estimate[1]) > 0)
+  Genes_significally_hyper <- list.filter(test_t.student, p.value < 0.05 & (estimate[1] - estimate[2]) > 0.2)
+  Genes_significally_hypo <- list.filter(test_t.student, p.value < 0.05 & (estimate[2] - estimate[1]) > 0.2)
   
   Genes_hyper <- names(Genes_significally_hyper) %>% unique(.)
   Genes_hypo <- names(Genes_significally_hypo) %>% unique(.)
