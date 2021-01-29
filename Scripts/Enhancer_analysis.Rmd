@@ -1,0 +1,16 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Initialisation
+
+```{r, prompt=FALSE}
+source("packages.R")
+source("Initialisation.R")
+```
+
+```{r}
+
+```
+

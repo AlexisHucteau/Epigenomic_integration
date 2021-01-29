@@ -39,112 +39,7 @@ Creation of Granges object with coordinates
 Overlapping of the different sources of annotations
 
 ```{r}
-gene_list <- c("CEBPA", "CPT1A", "CPT2", "SLC25A20", "AKT2", "PPARGC1A", "PTEN")
-
-Blueprint <- read.csv("../DATA/BLUEPRINT_fragments_good.tsv", sep = "\t") %>%
-  dplyr::select(., "gene_names":"type", "gene_type") %>%
-  separate_rows(., gene_names, sep = " ") %>%
-  separate_rows(., gene_type, sep = " ") %>%
-  unique(.)
-
-pchic <- prepare_pchic()
-PCHiC_bed <- unique(rbind(pchic[, c(1:3, 5)], pchic[, c(6:8, 10)]))
-PCHiC_GRange <- GRanges(
-  seqnames = PCHiC_bed$chr,
-  IRanges(start = PCHiC_bed$start, end = PCHiC_bed$end),
-  Gene_Pchic = PCHiC_bed$Name,
-  start_fragment = PCHiC_bed$start,
-  end_fragment = PCHiC_bed$end
-)
-PCHiC_GRange$ID <- paste(PCHiC_bed$chr, PCHiC_bed$start, sep = "_")
-colnames(pchic) <- c("chr_bait", "start_bait", "end_bait", "ID_bait", "Name_bait", "chr_oe", "start_oe", "end_oe", "ID_oe", "Name_oe")
-pchic$IDbait <- paste(pchic$chr_bait, pchic$start_bait, sep = "_")
-pchic$IDoe <- paste(pchic$chr_oe, pchic$start_oe, sep = "_")
-
-Blueprint_Granges <- GRanges(
-    seqnames = Blueprint$chr,
-    ranges = IRanges(start = Blueprint$start, end = Blueprint$end),
-    Blueprint_gene_names = Blueprint$gene_names,
-    type = Blueprint$type,
-    gene_type = Blueprint$gene_type
-  )
-
-## ILLUMINA 450K
-anno_450 <- read.csv("~/Illumina_Manifest/HumanMethylation450_15017482_v1-2.csv", skip = 7) %>% 
-  dplyr::select(., "Name", "CHR", "MAPINFO", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_UCSC_CpG_Island") %>%
-  dplyr::filter(., CHR != "") %>%
-  separate_rows(., UCSC_RefGene_Name, UCSC_RefGene_Group, sep = ";")
-
-CpGs_Granges_450 <- GRanges(
-  seqnames = anno_450$CHR,
-  ranges = IRanges(anno_450$MAPINFO, anno_450$MAPINFO +1),
-  CpG = anno_450$Name,
-  Illumina_Gene_name = anno_450$UCSC_RefGene_Name,
-  position = anno_450$UCSC_RefGene_Group,
-  Island = anno_450$Relation_to_UCSC_CpG_Island
-)
-overlaps_CpGs_Blueprint_450 <- findOverlaps(Blueprint_Granges, CpGs_Granges_450)
-match_hit_CpGs_Blueprint_450 <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_CpGs_Blueprint_450),]),
-                                       data.frame(mcols(CpGs_Granges_450[subjectHits(overlaps_CpGs_Blueprint_450),])))
-
-match_hit_CpGs_Blueprint_promoter_450 <- dplyr::filter(match_hit_CpGs_Blueprint_450, type == "P")
-
-anno_promoter_450 <- dplyr::filter(anno_450, UCSC_RefGene_Group == "TSS1500" | UCSC_RefGene_Group == "TSS200")
-
-overlaps_CpGs_Pchic_450 <- findOverlaps(CpGs_Granges_450, PCHiC_GRange)
-matchit_CpGs_Pchic_450 <- data.frame(mcols(CpGs_Granges_450[queryHits(overlaps_CpGs_Pchic_450),]),
-                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_CpGs_Pchic_450),])))
-gene_universe_450K <- unique(match_hit_CpGs_Blueprint_promoter_450$Blueprint_gene_names)
-#########################
-## ILLUMINA EPIC
-anno_EPIC <- read.csv("~/Illumina_Manifest/infinium-methylationepic-v-1-0-b5-manifest-file.csv", skip = 7) %>% 
-  dplyr::select(., "Name", "CHR", "MAPINFO", "UCSC_RefGene_Name", "UCSC_RefGene_Group", "Relation_to_UCSC_CpG_Island") %>%
-  dplyr::filter(., CHR != "") %>%
-  separate_rows(., UCSC_RefGene_Name, UCSC_RefGene_Group, sep = ";")
-
-CpGs_Granges_EPIC <- GRanges(
-  seqnames = anno_EPIC$CHR,
-  ranges = IRanges(anno_EPIC$MAPINFO, anno_EPIC$MAPINFO +1),
-  CpG = anno_EPIC$Name,
-  Illumina_Gene_name = anno_EPIC$UCSC_RefGene_Name,
-  position = anno_EPIC$UCSC_RefGene_Group,
-  Island = anno_EPIC$Relation_to_UCSC_CpG_Island
-)
-overlaps_CpGs_Blueprint_EPIC <- findOverlaps(Blueprint_Granges, CpGs_Granges_EPIC)
-match_hit_CpGs_Blueprint_EPIC <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_CpGs_Blueprint_EPIC),]),
-                                       data.frame(mcols(CpGs_Granges_EPIC[subjectHits(overlaps_CpGs_Blueprint_EPIC),])))
-
-match_hit_CpGs_Blueprint_promoter_EPIC <- dplyr::filter(match_hit_CpGs_Blueprint_EPIC, type == "P")
-
-anno_promoter_EPIC <- dplyr::filter(anno_EPIC, UCSC_RefGene_Group == "TSS1500" | UCSC_RefGene_Group == "TSS200")
-
-overlaps_CpGs_Pchic_EPIC <- findOverlaps(CpGs_Granges_EPIC, PCHiC_GRange)
-matchit_CpGs_Pchic_EPIC <- data.frame(mcols(CpGs_Granges_EPIC[queryHits(overlaps_CpGs_Pchic_EPIC),]),
-                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_CpGs_Pchic_EPIC),])))
-gene_universe_EPIC <- unique(match_hit_CpGs_Blueprint_promoter_EPIC$Blueprint_gene_names)
-##########################
-
-overlaps_Blueprint_Pchic <- findOverlaps(Blueprint_Granges, PCHiC_GRange)
-matchit_Blueprint_Pchic <- data.frame(mcols(Blueprint_Granges[queryHits(overlaps_Blueprint_Pchic),]),
-                                       data.frame(mcols(PCHiC_GRange[subjectHits(overlaps_Blueprint_Pchic),]))) %>%
-  dplyr::filter(., type == "P")
-
-signature <- read.csv("../DATA/BPmetCan.txt", sep = "\t")
-rownames(signature) <- signature$CpGs
-signature <- signature[,-1]
-
-number_CpG_per_gene_450 <- table(match_hit_CpGs_Blueprint_promoter_450$Blueprint_gene_names) %>%
-  as.data.frame(.) %>%
-  .[-1,]
-
-number_CpG_per_gene_EPIC <- table(match_hit_CpGs_Blueprint_promoter_EPIC$Blueprint_gene_names) %>%
-  as.data.frame(.) %>%
-  .[-1,]
-
-Gene_lists_folder <- "../Results/Tables report/Gene lists/"
-GO_folder <- "../Results/Tables report/GO/"
-
-rm(overlaps_Blueprint_Pchic, overlaps_CpGs_Pchic_EPIC, overlaps_CpGs_Blueprint_EPIC, overlaps_CpGs_Pchic_450, overlaps_CpGs_Blueprint_450)
+load("Initialisation.R")
 ```
 
 # TCGA
@@ -587,8 +482,6 @@ dotplot(Genes_hypermetylated_in_WT_promoter_and_enhancer_ego_whiele, showCategor
 ```{r}
 volcanoplot_methylation(BMIQ_Whiele_analysis[["IDH2m-WT"]], match_hit_CpGs_Blueprint_EPIC, "IDH2m vs WT")
 ```
-
-
 
 
 # Koichi's data Analyses
@@ -1484,7 +1377,10 @@ dotplot(Genes_HM_Baseline_Non_Responder_Prom_enhancer_ego, showCategory = 30, ti
 
 ```{r}
 load("../DATA/Wang_Feng_RNAseq.RData")
+```
 
+
+```{r}
 ann_color_RNA <- list(
     Phenotype = c(Baseline = "blue", Relapse = "red"))
 
@@ -1554,7 +1450,7 @@ Genes_repressed_during_Relapse <- enrichGO(
   gene = unique(up_entrez_in_Baseline$ID),
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
   pAdjustMethod = "none",
   universe = gene_universe_RNAseq_Wang_Feng
 )
@@ -1562,7 +1458,7 @@ Genes_overexpressed_during_Relapse <- enrichGO(
   gene = unique(down_entrez_in_Baseline$ID),
   keyType = "SYMBOL",
   OrgDb = "org.Hs.eg.db",
-  ont = "ALL",
+  ont = "BP",
   pAdjustMethod = "none",
   universe = gene_universe_RNAseq_Wang_Feng
 )

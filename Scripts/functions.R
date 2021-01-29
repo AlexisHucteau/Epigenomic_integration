@@ -1,7 +1,7 @@
 
   
 "%ni%" <- Negate("%in%")
-source("packages.R")
+source("~/GitHub/Epigenomic_integration/Scripts/packages.R")
 
 
 
@@ -983,8 +983,8 @@ T_test_on_methylation_promoter <- function(BMIQ, match_hit_CpGs_Blueprint_promot
     t.test(x[,A], x[,B])
   })
   
-  Genes_significally_hyper <- list.filter(test_t.student, p.value < 0.05 & (estimate[1] - estimate[2]) > 0.2)
-  Genes_significally_hypo <- list.filter(test_t.student, p.value < 0.05 & (estimate[2] - estimate[1]) > 0.2)
+  Genes_significally_hyper <- list.filter(test_t.student, p.value < 0.05 & (estimate[1] - estimate[2]) > 0)
+  Genes_significally_hypo <- list.filter(test_t.student, p.value < 0.05 & (estimate[2] - estimate[1]) > 0)
   
   Genes_hyper <- names(Genes_significally_hyper) %>% unique(.)
   Genes_hypo <- names(Genes_significally_hypo) %>% unique(.)
