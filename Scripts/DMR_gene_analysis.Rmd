@@ -328,7 +328,6 @@ Whiele_T.test_analysis$Genes_hypomet_rank %>% .[order(.$p.value),] %>% write.csv
 ```{r}
 load("../DATA/Methyl_DATA_Wang_Feng.RData")
 Phenotype_cluster <- read.csv("../DATA/Wang_Feng_DATA/Clustering_Baseline_phenotype.csv")
-#load("../DATA/Methyl_DATA_Wang_Feng.RData")
 ```
 
 ## DMR analysis
@@ -469,7 +468,7 @@ BMIQ_RESPONSES <- BMIQ_Wang_Feng[,str_detect(Phenotype_Wang_Feng$Phenotype, "esp
 
 Phenotype_Responses <- Phenotype_Wang_Feng[str_detect(Phenotype_Wang_Feng$Phenotype, "esponder"),]
 
-Koichi_T.test_analysis <- T_test_on_methylation_promoter(BMIQ_RESPONSES, match_hit_CpGs_Blueprint_promoter_EPIC, Phenotype_Responses, c("Non_Responder", "Responder"))
+Koichi_T.test_analysis <- T_test_on_methylation_promoter(BMIQ_RESPONSES, Overlap_data[["EPIC_Blueprint_promoter"]], Phenotype_Responses, c("Non_Responder", "Responder"))
 
 Visualize_Ttest_results(Koichi_T.test_analysis, "Koichi")
 
@@ -489,6 +488,36 @@ dotplot(Koichi_T.test_analysis$GO_hyper, showCategory = 30, title = "Hypermet")
 dotplot(Koichi_T.test_analysis$GO_hypo, showCategory = 30, title = "Hypomet")
 ```
 
+## Baseline analysis
+
+```{r}
+BMIQ_Baseline <- BMIQ_Wang_Feng[,str_detect(Phenotype_Wang_Feng$Baseline_Response, "esponder")]
+
+Phenotype_Baseline <- Phenotype_Wang_Feng[str_detect(Phenotype_Wang_Feng$Baseline_Response, "esponder"),]
+
+Phenotype_Baseline$Phenotype <- Phenotype_Baseline$Baseline_Response
+
+Koichi_Baseline_T.test_analysis <- T_test_on_methylation_promoter(BMIQ_Baseline, Overlap_data[["EPIC_Blueprint_promoter"]], Phenotype_Baseline, c("Non_Responder", "Responder"))
+
+Visualize_Ttest_results(Koichi_Baseline_T.test_analysis, "Koichi_baseline")
+
+Koichi_Baseline_T.test_analysis$Genes_hypermet_rank <- list.select(Koichi_Baseline_T.test_analysis$Genes_significally_Hyper, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
+
+Koichi_Baseline_T.test_analysis$Genes_hypomet_rank <- list.select(Koichi_Baseline_T.test_analysis$Genes_significally_Hypo, c(p.value, estimate[1], estimate[2])) %>%
+  lapply(., function(gene){
+    data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+  }) %>%
+  bind_rows(., .id = "Gene_name")
+
+dotplot(Koichi_Baseline_T.test_analysis$GO_hyper, showCategory = 30, title = "Hypermet")
+dotplot(Koichi_Baseline_T.test_analysis$GO_hypo, showCategory = 30, title = "Hypomet")
+
+Koichi_Baseline_T.test_analysis$Genes_hypermet_rank %>% .[order(.$p.value),] %>% write.csv(., file = paste0(Gene_lists_folder, "Koichi_Baseline_T.test_analysis_Genes_hypermet_rank.csv"), row.names = FALSE)
+```
 
 # Resume of foundings
 

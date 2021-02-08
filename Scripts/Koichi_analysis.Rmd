@@ -1,0 +1,19 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# INITIALISATION
+
+```{r, include=FALSE}
+source("functions.R")
+BMIQ_list <- list()
+```
+
+## DATA IMPORT
+
+```{r}
+load("../DATA/Methyl_DATA_Wang_Feng.RData")
+BMIQ_list[["Wang_Feng_Baseline"]] <- 
+```
+

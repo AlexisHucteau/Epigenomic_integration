@@ -1,0 +1,15 @@
+INFO [2021-02-05 16:26:59] [[1]]
+INFO [2021-02-05 16:26:59] Venndiag_data
+INFO [2021-02-05 16:26:59] 
+INFO [2021-02-05 16:26:59] $category.names
+INFO [2021-02-05 16:26:59] c("Baseline", "Post_treatment")
+INFO [2021-02-05 16:26:59] 
+INFO [2021-02-05 16:26:59] $output
+INFO [2021-02-05 16:26:59] [1] FALSE
+INFO [2021-02-05 16:26:59] 
+INFO [2021-02-05 16:26:59] $filename
+INFO [2021-02-05 16:26:59] [1] "../Results/Koichi_Venn_diagram.png"
+INFO [2021-02-05 16:26:59] 
+INFO [2021-02-05 16:26:59] $fill
+INFO [2021-02-05 16:26:59] myCol
+INFO [2021-02-05 16:26:59] 

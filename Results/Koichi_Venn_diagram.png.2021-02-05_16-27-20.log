@@ -1,0 +1,16 @@
+INFO [2021-02-05 16:27:20] [[1]]
+INFO [2021-02-05 16:27:20] Venndiag_data
+INFO [2021-02-05 16:27:20] 
+INFO [2021-02-05 16:27:20] $category.names
+INFO [2021-02-05 16:27:20] c("Baseline", "Post_treatment")
+INFO [2021-02-05 16:27:20] 
+INFO [2021-02-05 16:27:20] $output
+INFO [2021-02-05 16:27:20] [1] FALSE
+INFO [2021-02-05 16:27:20] 
+INFO [2021-02-05 16:27:20] $filename
+INFO [2021-02-05 16:27:20] [1] "../Results/Koichi_Venn_diagram.png"
+INFO [2021-02-05 16:27:20] 
+INFO [2021-02-05 16:27:20] $fill
+INFO [2021-02-05 16:27:20] myCol
+INFO [2021-02-05 16:27:20] 
+ERROR [2021-02-05 16:27:20] Unexpected parameter length for 'fill'

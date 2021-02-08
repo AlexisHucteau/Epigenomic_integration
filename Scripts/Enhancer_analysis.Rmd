@@ -6,11 +6,364 @@ output: html_notebook
 # Initialisation
 
 ```{r, prompt=FALSE}
-source("packages.R")
 source("Initialisation.R")
 ```
 
 ```{r}
+tmp_data[["Promoter_fragments"]] <- Pchic_data[["pchic"]]$IDbait %>% unique(.)
 
+Pchic_data[["Non_promoter_pchic"]] <- Pchic_data[["pchic"]] %>% 
+  dplyr::filter(., IDoe %ni% tmp_data[["Promoter_fragments"]]) %>%
+  dplyr::select(., IDbait, IDoe) %>%
+  split(., .$IDbait)
+
+Pchic_data[["Non_promoter_pchic"]] <- lapply(Pchic_data[["Non_promoter_pchic"]], function(x){
+  x$IDoe %>% unique(.)
+})
+
+tmp_data[["Non_Promoter_fragments"]] <- Pchic_data[["Non_promoter_pchic"]]$IDoe %>% unique(.)
+  
+Overlap_data[["450_CpG_chromatin_enhancer"]] <- Overlap_data[["450_CpG_chromatin"]] %>%
+  dplyr::filter(., ID %in% tmp_data[["Non_Promoter_fragments"]])
+
+CpGs_per_fragment <- list()
+CpGs_per_fragment[["450"]] <- Overlap_data[["450_CpG_chromatin_enhancer"]] %>%
+  dplyr::select(., c("CpG", "ID")) %>%
+  split(., Overlap_data[["450_CpG_chromatin_enhancer"]]$ID)
+
+Overlap_data[["EPIC_CpG_chromatin_enhancer"]] <- Overlap_data[["EPIC_CpG_chromatin"]] %>%
+  dplyr::filter(., ID %in% tmp_data[["Non_Promoter_fragments"]])
+
+CpGs_per_fragment[["EPIC"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer"]] %>%
+  dplyr::select(., c("CpG", "ID")) %>%
+  split(., Overlap_data[["EPIC_CpG_chromatin_enhancer"]]$ID)
+```
+
+
+# TCGA Analysis
+
+```{r}
+BMIQ <- list()
+BMIQ_CD34_IDHm_WT$CpG <- rownames(BMIQ_CD34_IDHm_WT)
+
+Overlap_data[["450_CpG_chromatin_enhancer_TCGA"]] <- Overlap_data[["450_CpG_chromatin_enhancer"]] %>%
+  dplyr::filter(., CpG %in% BMIQ_CD34_IDHm_WT$CpG)
+
+tmp_data[["CpGs_450_Non_Promoter_TCGA"]] <- Overlap_data[["450_CpG_chromatin_enhancer_TCGA"]]$CpG %>%
+  unique(.)
+
+BMIQ[["TCGA_Non_Promoter"]] <- BMIQ_CD34_IDHm_WT %>%
+  dplyr::filter(., CpG %in% tmp_data[["CpGs_450_Non_Promoter_TCGA"]])
+
+CpGs_per_fragment[["450_TCGA"]] <- Overlap_data[["450_CpG_chromatin_enhancer_TCGA"]] %>%
+  dplyr::select(., c("CpG", "ID")) %>%
+  split(., Overlap_data[["450_CpG_chromatin_enhancer_TCGA"]]$ID)
+
+CpGs_per_fragment[["450_TCGA"]] <- lapply(CpGs_per_fragment[["450_TCGA"]], function(fragment){
+  tmp <- BMIQ[["TCGA_Non_Promoter"]][fragment$CpG,c(1:51)] %>%
+    as.matrix(.)
+  if (length(tmp[,1])>1){
+    tmp <- t(colMeans2(tmp))
+    colnames(tmp) <- colnames(BMIQ[["TCGA_Non_Promoter"]][c(1:51)])
+  }
+  as.data.frame(tmp)
+})
+
+A <- Phenotype_BMIQ_CD34_IDHm_WT$Phenotype == "IDHm"
+B <- Phenotype_BMIQ_CD34_IDHm_WT$Phenotype == "WT"
+
+CpGs_per_fragment[["450_TCGA"]] <- lapply(CpGs_per_fragment[["450_TCGA"]], function(x){
+  tmp <- t.test(x[,A], x[,B])
+})
+
+CpGs_per_fragment[["450_TCGA"]] <- lapply(CpGs_per_fragment[["450_TCGA"]], function(x){
+  if(x[["p.value"]] < 0.05){
+    if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0.3){
+      delta <- "Hyper"
+    }else if (x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] < -0.3){
+      delta <- "Hypo"
+    }else{
+      delta <- "NULL"
+    }
+  }else{
+    delta <- "NULL"
+  }
+  tmp <- data.frame("p.value" = x[["p.value"]], "delta" = delta, "estimate" = x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"])
+  tmp
+})
+
+tmp <- names(CpGs_per_fragment[["450_TCGA"]])
+
+CpGs_per_fragment[["450_TCGA"]] <- rbindlist(CpGs_per_fragment[["450_TCGA"]]) %>% as.data.frame(.)
+rownames(CpGs_per_fragment[["450_TCGA"]]) <- tmp
+```
+
+```{r}
+Results <- list()
+
+Results[["Enhancer_TCGA"]] <- lapply(Overlap_data[["Fragment_connected_per_gene"]], function(x){
+  x[x %in% rownames(CpGs_per_fragment[["450_TCGA"]])]
+})
+
+Results[["Enhancer_TCGA"]] <- Results[["Enhancer_TCGA"]][lapply(Results[["Enhancer_TCGA"]],length)>0]
+
+Results[["Enhancer_TCGA"]] <- lapply(Results[["Enhancer_TCGA"]], function(x){
+  CpGs_per_fragment[["450_TCGA"]][x,]
+})
+
+Gene_lists[["Gene_enhancer_TCGA_universe"]] <- names(Results[["Enhancer_TCGA"]]) %>% unique(.)
+
+Results[["Enhancer_TCGA_summary"]] <- lapply(Results[["Enhancer_TCGA"]], function(x){
+  nb_enhancer_hyper <- length(x[,"delta"][x[,"delta"] == "Hyper"])
+  nb_enhancer_hypo <- length(x[,"delta"][x[,"delta"] == "Hypo"])
+  nb_enhancer_unchanged <- length(x[,"delta"][x[,"delta"] == "NULL"])
+  data.frame("nb_enhancer_hyper" = nb_enhancer_hyper, "nb_enhancer_hypo" = nb_enhancer_hypo, "nb_enhancer_unchanged" = nb_enhancer_unchanged, "total_enhancers" = nb_enhancer_hyper + nb_enhancer_hypo + nb_enhancer_unchanged)
+})
+
+Results[["Genes_with_hyper_enhancers_TCGA"]] <- list.filter(Results[["Enhancer_TCGA_summary"]], .$nb_enhancer_hyper > 1) 
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA"]] <- Results[["Genes_with_hyper_enhancers_TCGA"]][list.order(Results[["Genes_with_hyper_enhancers_TCGA"]], (nb_enhancer_hyper))]
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]] <- rbindlist(Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA"]]) %>% as.data.frame(.)
+rownames(Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]]) <- names(Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA"]])
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]]$percent_hyper <- (Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]]$nb_enhancer_hyper/Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]]$total_enhancers)*100
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]]$DM <- Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]]$total_enhancers - Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]]$nb_enhancer_unchanged
+
+write.csv(Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]], file = paste0(Gene_lists_folder, "Average_enhancer_methylation_TCGA_hyper_genes_ranked.csv"))
+
+saveRDS(Results, file = "../Results/Results_TCGA.RDS")
+
+Gene_ontology[["Average_hyper_TCGA"]] <- enrichGO(rownames(Results[["Genes_list_of_Genes_with_hyper_enhancers_TCGA_annoted"]])[c(1:2000)],
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = Gene_lists$Gene_enhancer_TCGA_universe)
+
+dotplot(Gene_ontology[["Average_hyper_TCGA"]], showCategory = 30, title = "Hypermet in IDH1/2m")
+```
+
+
+# Koichi Analyses
+
+```{r}
+load("../DATA/Methyl_DATA_Wang_Feng.RData")
+
+BMIQ[["Koichi"]] <- BMIQ_Wang_Feng
+BMIQ[["Koichi"]]$CpG <- rownames(BMIQ[["Koichi"]])
+
+Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer"]] %>%
+  dplyr::filter(., CpG %in% BMIQ[["Koichi"]]$CpG)
+
+tmp_data[["CpGs_EPIC_Non_Promoter_Koichi"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]]$CpG %>%
+  unique(.)
+
+BMIQ[["Koichi_Non_Promoter"]] <- BMIQ[["Koichi"]] %>%
+  dplyr::filter(., CpG %in% tmp_data[["CpGs_EPIC_Non_Promoter_Koichi"]])
+
+CpGs_per_fragment[["EPIC_Koichi"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]] %>%
+  dplyr::select(., c("CpG", "ID")) %>%
+  split(., Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]]$ID)
+
+CpGs_per_fragment[["EPIC_Koichi"]] <- lapply(CpGs_per_fragment[["EPIC_Koichi"]], function(fragment){
+  tmp <- BMIQ[["Koichi_Non_Promoter"]][fragment$CpG,c(1:105)] %>%
+    as.matrix(.)
+  if (length(tmp[,1])>1){
+    tmp <- t(colMeans2(tmp))
+    colnames(tmp) <- colnames(BMIQ[["Koichi_Non_Promoter"]][c(1:105)])
+  }
+  as.data.frame(tmp)
+})
+
+A <- Phenotype_Wang_Feng$Phenotype == "Non_Responder"
+B <- Phenotype_Wang_Feng$Phenotype == "Responder"
+
+CpGs_per_fragment[["EPIC_Koichi_ttest"]] <- lapply(CpGs_per_fragment[["EPIC_Koichi"]], function(x){
+  tmp <- t.test(x[,A], x[,B])
+})
+
+CpGs_per_fragment[["EPIC_Koichi_ttest_analysis"]] <- lapply(CpGs_per_fragment[["EPIC_Koichi_ttest"]], function(x){
+  if(x[["p.value"]] < 0.05){
+    if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0){
+      delta <- "Hyper"
+    }else{
+      delta <- "Hypo"
+    }
+  }else{
+    delta <- "NULL"
+  }
+  tmp <- data.frame("p.value" = x[["p.value"]], "delta" = delta, "estimate" = x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"])
+  tmp
+})
+
+tmp <- names(CpGs_per_fragment[["EPIC_Koichi_ttest_analysis"]])
+
+CpGs_per_fragment[["EPIC_Koichi_ttest_analysis"]] <- rbindlist(CpGs_per_fragment[["EPIC_Koichi_ttest_analysis"]]) %>% as.data.frame(.)
+rownames(CpGs_per_fragment[["EPIC_Koichi_ttest_analysis"]]) <- tmp
+```
+
+```{r}
+Results[["Enhancer_Koichi"]] <- lapply(Overlap_data[["Fragment_connected_per_gene"]], function(x){
+  x[x %in% rownames(CpGs_per_fragment[["EPIC_Koichi_ttest_analysis"]])]
+})
+
+Results[["Enhancer_Koichi"]] <- Results[["Enhancer_Koichi"]][lapply(Results[["Enhancer_Koichi"]],length)>0]
+
+Results[["Enhancer_Koichi"]] <- lapply(Results[["Enhancer_Koichi"]], function(x){
+  CpGs_per_fragment[["EPIC_Koichi_ttest_analysis"]][x,]
+})
+
+Gene_lists[["Gene_enhancer_Koichi_universe"]] <- names(Results[["Enhancer_Koichi"]]) %>% unique(.)
+
+Results[["Enhancer_Koichi_summary"]] <- lapply(Results[["Enhancer_Koichi"]], function(x){
+  nb_enhancer_hyper <- length(x[,"delta"][x[,"delta"] == "Hyper"])
+  nb_enhancer_hypo <- length(x[,"delta"][x[,"delta"] == "Hypo"])
+  nb_enhancer_unchanged <- length(x[,"delta"][x[,"delta"] == "NULL"])
+  data.frame("nb_enhancer_hyper" = nb_enhancer_hyper, "nb_enhancer_hypo" = nb_enhancer_hypo, "nb_enhancer_unchanged" = nb_enhancer_unchanged, "total_enhancers" = nb_enhancer_hyper + nb_enhancer_hypo + nb_enhancer_unchanged)
+})
+
+Results[["Genes_with_hyper_enhancers_koichi"]] <- list.filter(Results[["Enhancer_Koichi_summary"]], .$nb_enhancer_hyper > 1) 
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi"]] <- Results[["Genes_with_hyper_enhancers_koichi"]][list.order(Results[["Genes_with_hyper_enhancers_koichi"]], (nb_enhancer_hyper))]
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]] <- rbindlist(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi"]]) %>% as.data.frame(.)
+rownames(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]]) <- names(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi"]])
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]]$percent_hyper <- (Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]]$nb_enhancer_hyper/Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]]$total_enhancers)*100
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]]$DM <- Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]]$total_enhancers - Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]]$nb_enhancer_unchanged
+
+write.csv(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]], file = paste0(Gene_lists_folder, "Average_enhancer_methylation_Koichi_hyper_genes_ranked.csv"))
+
+Gene_ontology[["Average_hyper_Koichi"]] <- enrichGO(rownames(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_annoted"]])[c(1:600)],
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = Gene_lists$Gene_enhancer_TCGA_universe)
+
+dotplot(Gene_ontology[["Average_hyper_Koichi"]], showCategory = 30, title = "Hypermet in Koichi")
+
+saveRDS(Results, file = "../Results/Results_Koichi.RDS")
+```
+
+
+```{r}
+Phenotype_Wang_Feng_cluster <- read.csv("../DATA/Wang_Feng_DATA/Clustering_Baseline_phenotype.csv")
+
+Responder <- Phenotype_Wang_Feng %>% dplyr::filter(., Phenotype == "Responder") %>% .$Sample
+Non_responder <- Phenotype_Wang_Feng %>% dplyr::filter(., Phenotype == "Non_Responder") %>% .$Sample
+
+Phenotype_Wang_Feng$Baseline_Response <- sapply(Phenotype_Wang_Feng$Sample, function(x){
+    if(x %in% Responder){
+      tmp <- "Responder"
+    }else if(x %in% Non_responder){
+      tmp <- "Non_Responder"
+    }else{
+      tmp <- "NULL"
+    }
+  tmp
+})
+
+Phenotype_Wang_Feng$Baseline_Response <- sapply(Phenotype_Wang_Feng$Phenotype, function(x){
+  if(x == "Responder" | x == "Non_Responder"){
+    "NULL"
+  }else{
+    Phenotype_Wang_Feng$Baseline_Response
+  }
+})
+
+A <- Phenotype_Wang_Feng$Baseline_Response == "Non_Responder"
+B <- Phenotype_Wang_Feng$Baseline_Response == "Responder"
+
+CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest"]] <- lapply(CpGs_per_fragment[["EPIC_Koichi"]], function(x){
+  tmp <- t.test(x[,A], x[,B])
+})
+
+CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest_analysis"]] <- lapply(CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest"]], function(x){
+  if(x[["p.value"]] < 0.05){
+    if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0){
+      delta <- "Hyper"
+    }else{
+      delta <- "Hypo"
+    }
+  }else{
+    delta <- "NULL"
+  }
+  tmp <- data.frame("p.value" = x[["p.value"]], "delta" = delta, "estimate" = x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"])
+  tmp
+})
+
+tmp <- names(CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest_analysis"]])
+
+CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest_analysis"]] <- rbindlist(CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest_analysis"]]) %>% as.data.frame(.)
+rownames(CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest_analysis"]]) <- tmp
+```
+
+```{r}
+Results[["Enhancer_Koichi_Baseline"]] <- lapply(Overlap_data[["Fragment_connected_per_gene"]], function(x){
+  x[x %in% rownames(CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest_analysis"]])]
+})
+
+Results[["Enhancer_Koichi_Baseline"]] <- Results[["Enhancer_Koichi_Baseline"]][lapply(Results[["Enhancer_Koichi_Baseline"]],length)>0]
+
+Results[["Enhancer_Koichi_Baseline"]] <- lapply(Results[["Enhancer_Koichi_Baseline"]], function(x){
+  CpGs_per_fragment[["EPIC_Koichi_Baseline_ttest_analysis"]][x,]
+})
+
+Gene_lists[["Gene_enhancer_Koichi_baseline_universe"]] <- names(Results[["Enhancer_Koichi_Baseline"]]) %>% unique(.)
+
+Results[["Enhancer_Koichi_Baseline_summary"]] <- lapply(Results[["Enhancer_Koichi_Baseline"]], function(x){
+  nb_enhancer_hyper <- length(x[,"delta"][x[,"delta"] == "Hyper"])
+  nb_enhancer_hypo <- length(x[,"delta"][x[,"delta"] == "Hypo"])
+  nb_enhancer_unchanged <- length(x[,"delta"][x[,"delta"] == "NULL"])
+  data.frame("nb_enhancer_hyper" = nb_enhancer_hyper, "nb_enhancer_hypo" = nb_enhancer_hypo, "nb_enhancer_unchanged" = nb_enhancer_unchanged, "total_enhancers" = nb_enhancer_hyper + nb_enhancer_hypo + nb_enhancer_unchanged)
+})
+
+Results[["Genes_with_hyper_enhancers_koichi_baseline"]] <- list.filter(Results[["Enhancer_Koichi_Baseline_summary"]], .$nb_enhancer_hyper > 1) 
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline"]] <- Results[["Genes_with_hyper_enhancers_koichi_baseline"]][list.order(Results[["Genes_with_hyper_enhancers_koichi_baseline"]], (nb_enhancer_hyper))]
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]] <- rbindlist(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline"]]) %>% as.data.frame(.)
+rownames(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]]) <- names(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline"]])
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]]$percent_hyper <- (Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]]$nb_enhancer_hyper/Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]]$total_enhancers)*100
+
+Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]]$DM <- Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]]$total_enhancers - Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]]$nb_enhancer_unchanged
+
+write.csv(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]], file = paste0(Gene_lists_folder, "Average_enhancer_methylation_Koichi_hyper_genes_ranked.csv"))
+
+Gene_ontology[["Average_hyper_Koichi_baseline"]] <- enrichGO(rownames(Results[["Genes_list_of_Genes_with_hyper_enhancers_koichi_baseline_annoted"]])[c(1:600)],
+    keyType = "SYMBOL",
+    OrgDb = "org.Hs.eg.db",
+    ont = "BP",
+    pAdjustMethod = "none", 
+    universe = Gene_lists$Gene_enhancer_Koichi_universe)
+
+dotplot(Gene_ontology[["Average_hyper_Koichi_baseline"]], showCategory = 30, title = "Hypermet in Koichi_baseline")
+
+saveRDS(Results, file = "../Results/Results_Koichi_baseline.RDS")
+```
+
+
+
+
+```{r}
+Genes_hyper_prom_Baseline <- Koichi_Baseline_T.test_analysis$Genes_hypermet_rank[order(Koichi_Baseline_T.test_analysis$Genes_hypermet_rank$p.value),"Gene_name"][c(1:1000)]
+
+Genes_hyper_prom_Post_treatment <- Koichi_T.test_analysis$Genes_hypermet_rank[order(Koichi_T.test_analysis$Genes_hypermet_rank$p.value), "Gene_name"][c(1:1000)]
+
+Venndiag_data <- list(Genes_hyper_prom_Baseline, Genes_hyper_prom_Post_treatment)
+
+myCol <- brewer.pal(3, "Pastel2")
+
+
+venn.diagram(Venndiag_data, 
+             category.names = c("Baseline", "Post_treatment"),
+             output = FALSE,
+             filename = "../Results/Koichi_Venn_diagram.png",
+             fill = myCol)
 ```
 
