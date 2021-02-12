@@ -983,8 +983,8 @@ T_test_on_methylation_promoter <- function(BMIQ, match_hit_CpGs_Blueprint_promot
     t.test(x[,A], x[,B])
   })
   
-  Genes_significally_hyper <- list.filter(test_t.student, p.value < 0.05 & (estimate[1] - estimate[2]) > 0)
-  Genes_significally_hypo <- list.filter(test_t.student, p.value < 0.05 & (estimate[2] - estimate[1]) > 0)
+  Genes_significally_hyper <- list.filter(test_t.student, p.value < 0.05 & (estimate[1] - estimate[2]) > 0.1)
+  Genes_significally_hypo <- list.filter(test_t.student, p.value < 0.05 & (estimate[2] - estimate[1]) > 0.1)
   
   Genes_hyper <- names(Genes_significally_hyper) %>% unique(.)
   Genes_hypo <- names(Genes_significally_hypo) %>% unique(.)
@@ -995,8 +995,6 @@ T_test_on_methylation_promoter <- function(BMIQ, match_hit_CpGs_Blueprint_promot
   
   res <- list()
   res[["test_t.student"]] <- test_t.student
-  res[["Genes_significally_Hyper"]] <- Genes_significally_hyper
-  res[["Genes_significally_Hypo"]] <- Genes_significally_hypo
   
   message(" == Gene ontology analysis == ")
   
@@ -1018,8 +1016,27 @@ T_test_on_methylation_promoter <- function(BMIQ, match_hit_CpGs_Blueprint_promot
     universe = Gene_universe
   ) 
   
-  res[["Genes_hypermet"]] <- Genes_hyper
-  res[["Genes_hypomet"]] <- Genes_hypo
+  Genes_hypermet_rank <- list.select(Genes_significally_hyper, c(p.value, estimate[1], estimate[2])) %>%
+    lapply(., function(gene){
+      data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+    }) %>%
+    bind_rows(., .id = "Gene_name") 
+  
+  Genes_hypomet_rank <- list.select(Genes_significally_hypo, c(p.value, estimate[1], estimate[2])) %>%
+    lapply(., function(gene){
+      data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+    }) %>%
+    bind_rows(., .id = "Gene_name")
+  
+  Genes_methylation_analysis <- list.select(test_t.student, c(p.value, estimate[1], estimate[2])) %>%
+    lapply(., function(gene){
+      data.frame("p.value" = unlist(gene)[[1]], "mean of x" = unlist(gene)["mean of x"], "mean of y" = unlist(gene)["mean of y"], "delta" = unlist(gene)["mean of x"] - unlist(gene)["mean of y"])
+    }) %>%
+    bind_rows(., .id = "Gene_name")
+  
+  res[["Genes_methylation_analysis"]] <- Genes_methylation_analysis
+  res[["Genes_significally_Hyper"]] <- Genes_hypermet_rank
+  res[["Genes_significally_Hypo"]] <- Genes_hypomet_rank
   res[["Genes_universe"]] <- Gene_universe
   res[["GO_hyper"]] <- Genes_hyper_ego
   res[["GO_hypo"]] <- Genes_hypo_ego
@@ -1045,4 +1062,73 @@ Visualize_Ttest_results <- function(Ttest_Results, dataname){
     write.csv(auto_stress_pathways, file = paste0(GO_folder, dataname, "_stress_metabolism_pathway_hypo.csv"))
     message(" GO hypometh written ")
     }
+}
+
+T_test_on_methylation_enhancer <- function(Mean_CpGs_per_fragment, comparisons, Fragment_connected_per_gene){
+  res <- list()
+  A <- comparisons[[1]]
+  B <- comparisons[[2]]
+  message("T test analysis")
+  T_test <- lapply(Mean_CpGs_per_fragment, function(x){
+    t.test(x[,A], x[,B])
+  })
+  
+  res[["T_Test"]] <- T_test
+  
+  T_test_analysis <- lapply(T_test, function(x){
+    if(x[["p.value"]] < 0.05){
+      if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0){
+        delta <- "Hyper"
+      }else{
+        delta <- "Hypo"
+      }
+    }else{
+      delta <- "NULL"
+    }
+    tmp <- data.frame("p.value" = x[["p.value"]], "delta" = delta, "estimate" = x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"])
+    tmp
+  })
+  
+  tmp <- names(T_test_analysis)
+  
+  T_test_analysis <- rbindlist(T_test_analysis) %>% as.data.frame(.)
+  rownames(T_test_analysis) <- tmp
+  res[["T_test_analysis"]] <- T_test_analysis
+  
+  
+  res[["Enhancer"]] <- lapply(Fragment_connected_per_gene, function(x){
+    x[x %in% names(Mean_CpGs_per_fragment)]
+  })
+
+  res[["Enhancer"]] <- res[["Enhancer"]][lapply(res[["Enhancer"]],length)>0]
+  res[["Enhancer"]] <- lapply(res[["Enhancer"]], function(x){
+    T_test_analysis[x,]
+  })
+  Gene_universe <- names(res[["Enhancer"]]) %>% unique(.)
+
+  res[["Enhancer_summary"]] <- lapply(res[["Enhancer"]], function(x){
+    nb_enhancer_hyper <- length(x[,"delta"][x[,"delta"] == "Hyper"])
+    nb_enhancer_hypo <- length(x[,"delta"][x[,"delta"] == "Hypo"])
+    nb_enhancer_unchanged <- length(x[,"delta"][x[,"delta"] == "NULL"])
+    data.frame("nb_enhancer_hyper" = nb_enhancer_hyper, "nb_enhancer_hypo" = nb_enhancer_hypo, "nb_enhancer_unchanged" = nb_enhancer_unchanged, "total_enhancers" = nb_enhancer_hyper + nb_enhancer_hypo + nb_enhancer_unchanged)
+  })
+
+  res[["Genes_with_hyper_enhancers"]] <- list.filter(res[["Enhancer_summary"]], nb_enhancer_hyper > 1)
+
+  res[["Genes_list_of_Genes_with_hyper_enhancers"]] <- res[["Genes_with_hyper_enhancers"]][list.order(res[["Genes_with_hyper_enhancers"]], (nb_enhancer_hyper))]
+
+  res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]] <- rbindlist(res[["Genes_list_of_Genes_with_hyper_enhancers"]]) %>%
+    as.data.frame(.)
+  rownames(res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]) <- names(res[["Genes_list_of_Genes_with_hyper_enhancers"]])
+
+  res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]$percent_hyper <- (res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]$nb_enhancer_hyper/res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]$total_enhancers)*100
+  res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]$DM <- res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]$total_enhancers - res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]$nb_enhancer_unchanged
+
+  res[["GO"]] <- enrichGO(rownames(res[["Genes_list_of_Genes_with_hyper_enhancers_annoted"]]),
+                                                        keyType = "SYMBOL",
+                                                        OrgDb = "org.Hs.eg.db",
+                                                        ont = "BP",
+                                                        pAdjustMethod = "none",
+                                                        universe = Gene_universe)
+  return(res)
 }

@@ -10,7 +10,7 @@ Blueprint_data[["Blueprint"]] <- read.csv("~/GitHub/Epigenomic_integration/DATA/
   unique(.)
 
 Pchic_data <- list()
-Pchic_data[["pchic"]] <- prepare_pchic()
+Pchic_data[["pchic"]] <- prepare_pchic(cell_lines = c("Mon", "Mac1", "Mac0", "Mac2", "MK", "Ery", "EP"))
 Pchic_data[["bed"]] <- unique(rbind(Pchic_data[["pchic"]][, c(1:3, 5)], Pchic_data[["pchic"]][, c(6:8, 10)]))
 Pchic_data[["GRanges"]] <- GRanges(
   seqnames = Pchic_data[["bed"]]$chr,
@@ -103,6 +103,16 @@ Gene_lists_folder <- "~/GitHub/Epigenomic_integration/Results/Tables report/Gene
 GO_folder <- "~/GitHub/Epigenomic_integration/Results/Tables report/GO/"
 
 tmp_data <- list()
+tmp_data[["Promoter_fragments"]] <- Pchic_data[["pchic"]]$IDbait %>% unique(.)
+
+Pchic_data[["Non_promoter_pchic"]] <- Pchic_data[["pchic"]] %>% 
+  dplyr::filter(., IDoe %ni% tmp_data[["Promoter_fragments"]]) %>%
+  dplyr::select(., IDbait, IDoe) %>%
+  split(., .$IDbait)
+
+Pchic_data[["Non_promoter_pchic"]] <- lapply(Pchic_data[["Non_promoter_pchic"]], function(x){
+  x$IDoe %>% unique(.)
+})
 
 Overlap_data[["Fragment_connected_per_gene"]] <- split(Overlap_data[["Blueprint_Chromatin"]], Overlap_data[["Blueprint_Chromatin"]]$Blueprint_gene_names)
 Overlap_data[["Fragment_connected_per_gene"]] <- Overlap_data[["Fragment_connected_per_gene"]][-1]
@@ -120,3 +130,21 @@ Overlap_data[["Fragment_connected_per_gene"]] <- lapply(Overlap_data[["Fragment_
 })
 
 rm(overlaps)
+
+
+tmp_data[["Non_Promoter_fragments"]] <- Pchic_data[["Non_promoter_pchic"]] %>% unlist(.) %>% unique(.)
+
+Overlap_data[["450_CpG_chromatin_enhancer"]] <- Overlap_data[["450_CpG_chromatin"]] %>%
+  dplyr::filter(., ID %in% tmp_data[["Non_Promoter_fragments"]])
+
+CpGs_per_fragment <- list()
+CpGs_per_fragment[["450"]] <- Overlap_data[["450_CpG_chromatin_enhancer"]] %>%
+  dplyr::select(., c("CpG", "ID")) %>%
+  split(., Overlap_data[["450_CpG_chromatin_enhancer"]]$ID)
+
+Overlap_data[["EPIC_CpG_chromatin_enhancer"]] <- Overlap_data[["EPIC_CpG_chromatin"]] %>%
+  dplyr::filter(., ID %in% tmp_data[["Non_Promoter_fragments"]])
+
+CpGs_per_fragment[["EPIC"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer"]] %>%
+  dplyr::select(., c("CpG", "ID")) %>%
+  split(., Overlap_data[["EPIC_CpG_chromatin_enhancer"]]$ID)

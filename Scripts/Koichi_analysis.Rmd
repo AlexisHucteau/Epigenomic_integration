@@ -8,12 +8,761 @@ output: html_notebook
 ```{r, include=FALSE}
 source("functions.R")
 BMIQ_list <- list()
+Phenotypes <- list()
+Results <- list()
+Gene_ontology <- list()
+source("Initialisation.R")
 ```
 
 ## DATA IMPORT
 
 ```{r}
 load("../DATA/Methyl_DATA_Wang_Feng.RData")
-BMIQ_list[["Wang_Feng_Baseline"]] <- 
+load("../DATA/Wang_Feng_RNAseq.RData")
+Phenotypes[["Koichi_cohort"]] <- read.csv("../DATA/Patient_phenotype_Koichi_cohort.csv")
+```
+
+# Methylation analysis
+
+## Baseline Non_Responder vs Responder
+
+```{r}
+data_subset <- Phenotypes[["Koichi_cohort"]][ , c("Baseline_phenotype", "Baseline_Sample")]  
+
+Patient_Baseline_with_treatment_annotation <- Phenotypes[["Koichi_cohort"]][complete.cases(data_subset), ]
+rm(data_subset)
+BMIQ_list[["Baseline_Methylation"]] <- dplyr::select(BMIQ_Wang_Feng, Patient_Baseline_with_treatment_annotation$Baseline_Sample)
+
+Phenotypes[["Baseline_Methylation"]] <- data.frame("Sample" = Patient_Baseline_with_treatment_annotation$Baseline_Sample, "Phenotype" = Patient_Baseline_with_treatment_annotation$Baseline_phenotype)
+
+Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer"]] %>%
+  dplyr::filter(., CpG %in% rownames(BMIQ_list[["Baseline_Methylation"]]))
+
+tmp_data[["CpGs_EPIC_Non_Promoter_Koichi"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]]$CpG %>%
+  unique(.)
+```
+
+### Enhancer Koichi preparation
+
+```{r}
+BMIQ_list[["Koichi_Methylation_Non_promoter"]] <- BMIQ_Wang_Feng %>%
+  dplyr::filter(., rownames(.) %in% tmp_data[["CpGs_EPIC_Non_Promoter_Koichi"]])
+
+CpGs_per_fragment[["EPIC_Koichi"]] <- Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]] %>%
+  dplyr::select(., c("CpG", "ID")) %>%
+  split(., Overlap_data[["EPIC_CpG_chromatin_enhancer_Koichi"]]$ID)
+
+part1 <- CpGs_per_fragment[["EPIC_Koichi"]][c(1:20000)]
+
+part1 <- lapply(part1, function(fragment){
+  tmp <- BMIQ_list[["Koichi_Methylation_Non_promoter"]][fragment$CpG,] %>%
+    as.matrix(.)
+  if (length(tmp[,1])>1){
+    tmp <- t(colMeans2(tmp))
+    colnames(tmp) <- colnames(BMIQ_list[["Koichi_Methylation_Non_promoter"]])
+  }
+  as.data.frame(tmp)
+})
+system("say part one finished")
+part2 <- CpGs_per_fragment[["EPIC_Koichi"]][c(20001:40000)]
+
+part2 <- lapply(part2, function(fragment){
+  tmp <- BMIQ_list[["Koichi_Methylation_Non_promoter"]][fragment$CpG,] %>%
+    as.matrix(.)
+  if (length(tmp[,1])>1){
+    tmp <- t(colMeans2(tmp))
+    colnames(tmp) <- colnames(BMIQ_list[["Koichi_Methylation_Non_promoter"]])
+  }
+  as.data.frame(tmp)
+})
+system("say part two finished")
+part3 <- CpGs_per_fragment[["EPIC_Koichi"]][c(40001:60000)]
+
+part3 <- lapply(part3, function(fragment){
+  tmp <- BMIQ_list[["Koichi_Methylation_Non_promoter"]][fragment$CpG,] %>%
+    as.matrix(.)
+  if (length(tmp[,1])>1){
+    tmp <- t(colMeans2(tmp))
+    colnames(tmp) <- colnames(BMIQ_list[["Koichi_Methylation_Non_promoter"]])
+  }
+  as.data.frame(tmp)
+})
+
+system("say part three finished")
+
+part4 <- CpGs_per_fragment[["EPIC_Koichi"]][c(60001:68371)]
+
+part4 <- lapply(part4, function(fragment){
+  tmp <- BMIQ_list[["Koichi_Methylation_Non_promoter"]][fragment$CpG,] %>%
+    as.matrix(.)
+  if (length(tmp[,1])>1){
+    tmp <- t(colMeans2(tmp))
+    colnames(tmp) <- colnames(BMIQ_list[["Koichi_Methylation_Non_promoter"]])
+  }
+  as.data.frame(tmp)
+})
+
+system("say finished finished finished")
+
+CpGs_per_fragment[["Means_EPIC_Koichi"]] <- c(part1, part2, part3, part4)
+
+saveRDS(CpGs_per_fragment[["Means_EPIC_Koichi"]], "../DATA/Means_Cpgs_Koichi_per_fragment.RDS")
+```
+
+### Promoter
+
+```{r}
+Results[["Basline_methylation_promoter"]] <- T_test_on_methylation_promoter(BMIQ = BMIQ_list[["Baseline_Methylation"]], 
+                                                                            Phenotype = Phenotypes[["Baseline_Methylation"]],
+                                                                            match_hit_CpGs_Blueprint_promoter = Overlap_data[["EPIC_Blueprint_promoter"]],
+                                                                            comparison = c("Non_Responder", "Responder"))
+
+```
+
+### Enhancer
+
+```{r}
+Samples <- colnames(CpGs_per_fragment[["Means_EPIC_Koichi"]][["1_172895418"]]) 
+
+A <- sapply(Samples, function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Non_Responder")
+  x %in% tmp$Baseline_Sample
+}) %>% as.vector(.)
+B <- sapply(Samples, function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Responder")
+  x %in% tmp$Baseline_Sample
+}) %>% as.vector(.)
+
+comparison <- list()
+comparison[[1]] <- A
+comparison[[2]] <- B
+
+Results[["Baseline_enhancer_analysis"]] <- T_test_on_methylation_enhancer(Mean_CpGs_per_fragment = CpGs_per_fragment[["Means_EPIC_Koichi"]], 
+                               comparisons = comparison, 
+                               Fragment_connected_per_gene = Overlap_data[["Fragment_connected_per_gene"]])
+
+Results[["Baseline_enhancer_analysis"]][["Genes_list_of_Genes_with_hyper_enhancers_annoted"]] %>% write.csv(., "../Results/Tables report/Baseline_enhancer_analysis_genes_hyper.csv")
+
+```
+
+## After treatment Non_responder vs Responder
+
+
+```{r}
+data_subset <- Phenotypes[["Koichi_cohort"]][ , c("Baseline_phenotype", "Post_treatment_sample")]  
+
+Patient_post_treatment_with_treatment_annotation <- Phenotypes[["Koichi_cohort"]][complete.cases(data_subset), ]
+rm(data_subset)
+BMIQ_list[["Post_Methylation"]] <- dplyr::select(BMIQ_Wang_Feng, Patient_post_treatment_with_treatment_annotation$Post_treatment_sample)
+
+Phenotypes[["Post_Methylation"]] <- data.frame("Sample" = Patient_Baseline_with_treatment_annotation$Post_treatment_sample, "Phenotype" = Patient_Baseline_with_treatment_annotation$Baseline_phenotype)
+```
+
+### Promoter
+
+```{r}
+Results[["Post_methylation_promoter"]] <- T_test_on_methylation_promoter(BMIQ = BMIQ_list[["Post_Methylation"]], 
+                                                                            Phenotype = Phenotypes[["Post_Methylation"]],
+                                                                            match_hit_CpGs_Blueprint_promoter = Overlap_data[["EPIC_Blueprint_promoter"]],
+                                                                            comparison = c("Non_Responder", "Responder"))
+```
+
+### Enhancer
+
+```{r}
+A <- sapply(Samples, function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Non_Responder")
+  x %in% tmp$Post_treatment_sample
+}) %>% as.vector(.)
+B <- sapply(Samples, function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Responder")
+  x %in% tmp$Post_treatment_sample
+}) %>% as.vector(.)
+
+comparison <- list()
+comparison[[1]] <- A
+comparison[[2]] <- B
+
+Results[["After_treatment_enhancer_analysis"]] <- T_test_on_methylation_enhancer(Mean_CpGs_per_fragment = CpGs_per_fragment[["Means_EPIC_Koichi"]], 
+                               comparisons = comparison, 
+                               Fragment_connected_per_gene = Overlap_data[["Fragment_connected_per_gene"]])
+
+Results[["After_treatment_enhancer_analysis"]][["Genes_list_of_Genes_with_hyper_enhancers_annoted"]] %>% write.csv(., "../Results/Tables report/After_treatment_enhancer_analysis_genes_hyper.csv")
+```
+
+
+# Gene expression
+
+```{r}
+A <- sapply(colnames(RNAseq_Wang_Feng), function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Non_Responder")
+  x %in% tmp$Baseline_RNAseq_data
+})
+
+B <- sapply(colnames(RNAseq_Wang_Feng), function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Responder")
+  x %in% tmp$Baseline_RNAseq_data
+})
+
+RNAseq_Wang_Feng_Baseline <- RNAseq_Wang_Feng %>%
+  .[,A | B]
+
+C <- sapply(colnames(RNAseq_Wang_Feng_Baseline), function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Non_Responder")
+  x %in% tmp$Baseline_RNAseq_data
+})
+
+D <- sapply(colnames(RNAseq_Wang_Feng_Baseline), function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Responder")
+  x %in% tmp$Baseline_RNAseq_data
+})
+
+tmp <- data.frame("Non_responder" = C, "Responder" = D)
+tmp$Phenotype <- ifelse(C, "Non_responder", ifelse(D, "Responder", "No_data"))
+
+ann_color_RNA <- list(
+    Phenotype = c(Responder = "blue", Non_responder = "red", No_data = "grey"))
+
+png("../Results/Heatmap_RNAseq_Baseline.png")
+Make_heatmap(RNAseq_Wang_Feng_Baseline, tmp, "pearson", "Non_responder & Responder", ann_color_RNA)
+dev.off()
+
+heatmap_Baseline <- Make_heatmap(RNAseq_Wang_Feng_Baseline, tmp, "pearson", "Non_responder & Responder", ann_color_RNA)
+
+# colnames(RNAseq_Wang_Feng)[heatmap_Baseline$tree_col[["order"]]][c(1:15)]
+# 
+# batch = c(rep("A", 15), rep("B", 51-15))
+# 
+# combat_edata1 = ComBat(dat=RNAseq_Wang_Feng, batch=batch, mod=NULL, par.prior=TRUE, prior.plots=FALSE)
+# 
+# Make_heatmap(combat_edata1, tmp, "pearson", "Non_responder & Responder", ann_color_RNA)
+
+RNAseq_Wang_Feng_Baseline_analysis2 <- Differential_analysis(tmp$Phenotype, RNAseq_Wang_Feng_Baseline)
+
+# RNAseq_Wang_Feng_Baseline_analysis_batch1_corrected <- Differential_analysis(tmp$Phenotype, combat_edata1)
+```
+
+```{r}
+rownames(RNAseq_Wang_Feng_Baseline) <- rownames(RNAseq_Wang_Feng_Baseline) %>% str_split(., "[|]") %>% lapply(., function(x){
+  x[1]
+}) %>%
+  unlist(.) %>%
+  duplicated(.)
+
+
+```
+
+
+```{r}
+Genes_methylation <- Results[["Basline_methylation_promoter"]]$Genes_methylation_analysis
+colnames(Genes_methylation) <- c("Gene_name", "Methylation_p.value", "Mean_NR_methylation", "Mean_R_methylation", "delta_methylation")
+
+Genes_expression <- RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]
+Genes_expression$ID <- Genes_expression$ID %>% str_split(., "[|]") %>% lapply(., function(x){
+  x[1]
+}) %>%
+  unlist(.)
+
+# Genes_expression_batch_corrected <- RNAseq_Wang_Feng_Baseline_analysis_batch1_corrected[["Non_responder-Responder"]]
+# Genes_expression_batch_corrected$ID <- Genes_expression_batch_corrected$ID %>% str_split(., "[|]") %>% lapply(., function(x){
+#   x[1]
+# }) %>%
+#   unlist(.)
+
+Gene_methyl_expression_data <- merge(Genes_expression, Genes_methylation, by.x = "ID", by.y = "Gene_name", all = TRUE)
+Gene_methyl_expression_data_both_annotations <- merge(Genes_expression, Genes_methylation, by.x = "ID", by.y = "Gene_name")
+
+Genes_hypermethylated_NR_vs_R <- Gene_methyl_expression_data_both_annotations %>%
+  dplyr::filter(., delta_methylation > 0.1 & Methylation_p.value < 0.1)
+
+Genes_hypomethylated_NR_vs_R <- Gene_methyl_expression_data_both_annotations %>%
+  dplyr::filter(., delta_methylation < -0.1 & Methylation_p.value < 0.1)
+
+Genes_Hypermethylated_suppressed <- Gene_methyl_expression_data_both_annotations %>%
+  dplyr::filter(., delta_methylation > 0.1 & logFC < -0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+
+Genes_Hypomethylated_upregulated <-  Gene_methyl_expression_data_both_annotations %>%
+  dplyr::filter(., delta_methylation < -0.1 & logFC > 0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+
+Genes_Hypermethylated_upregulated <- Gene_methyl_expression_data_both_annotations %>%
+  dplyr::filter(., delta_methylation > 0.1 & logFC > 0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+
+Genes_Hypomethylated_suppressed <-  Gene_methyl_expression_data_both_annotations %>%
+  dplyr::filter(., delta_methylation < -0.1 & logFC < -0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+
+
+###############
+
+# Gene_methyl_expression_data_batch_corrected <- merge(Genes_expression_batch_corrected, Genes_methylation, by.x = "ID", by.y = "Gene_name", all = TRUE)
+# 
+# Genes_hypermethylated_NR_vs_R_batch_corrected <- Gene_methyl_expression_data_batch_corrected %>%
+#   dplyr::filter(., delta_methylation > 0.1 & Methylation_p.value < 0.1)
+# 
+# Genes_hypomethylated_NR_vs_R_batch_corrected <- Gene_methyl_expression_data_batch_corrected %>%
+#   dplyr::filter(., delta_methylation < -0.1 & Methylation_p.value < 0.1)
+# 
+# Genes_Hypermethylated_suppressed_batch_corrected <- Gene_methyl_expression_data_batch_corrected %>%
+#   dplyr::filter(., delta_methylation > 0.1 & logFC < -0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+# 
+# Genes_Hypomethylated_upregulated_batch_corrected <-  Gene_methyl_expression_data_batch_corrected %>%
+#   dplyr::filter(., delta_methylation < -0.1 & logFC > 0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+# 
+# Genes_Hypermethylated_upregulated_batch_corrected <- Gene_methyl_expression_data_batch_corrected %>%
+#   dplyr::filter(., delta_methylation > 0.1 & logFC > 0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+# 
+# Genes_Hypomethylated_suppressed_batch_corrected <-  Gene_methyl_expression_data_batch_corrected %>%
+#   dplyr::filter(., delta_methylation < -0.1 & logFC < -0.75 & P.Value < 0.1 & Methylation_p.value < 0.1)
+```
+
+```{r}
+Number_Genes_Hypermethylated_no_changes <- length(Genes_hypermethylated_NR_vs_R$ID) - length(Genes_Hypermethylated_upregulated$ID) - length(Genes_Hypermethylated_suppressed$ID)
+
+Number_Genes_Hypomethylated_no_changes <- length(Genes_hypomethylated_NR_vs_R$ID) - length(Genes_Hypomethylated_upregulated$ID) - length(Genes_Hypomethylated_suppressed$ID)
+
+Numbers <- c(length(Genes_Hypermethylated_upregulated$ID), 
+             Number_Genes_Hypermethylated_no_changes, 
+             length(Genes_Hypermethylated_suppressed$ID), 
+             length(Genes_Hypomethylated_upregulated$ID), 
+             Number_Genes_Hypomethylated_no_changes, 
+             length(Genes_Hypomethylated_suppressed$ID))
+
+
+Barplot_data <- data.frame(Gene_expression=rep(c("up_regulated", "no_changes", "down_regulated"), 2),
+                           Methylation=rep(c("Hypermethylated", "Hypomethylated"), each = 3),
+                           Number_of_genes = Numbers)
+
+ggplot(data=Barplot_data, aes(x=Methylation, y=Number_of_genes, fill=Gene_expression)) +
+  geom_bar(stat="identity")
+ggsave("~/correlation_methylation_expression.png")
+```
+
+```{r}
+Genes_up <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., logFC > 0.75 & P.Value < 0.05) %>%
+  .$ID
+
+Genes_hyper <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., Methylation_p.value < 0.05 & delta_methylation > 0.1) %>%
+  .$ID
+
+Genes_hypo <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., Methylation_p.value < 0.05 & delta_methylation < -0.1) %>%
+  .$ID
+
+Genes_down <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., logFC < -0.75 & P.Value < 0.05) %>%
+  .$ID
+
+Venn_promoter_diagramm <- list(
+  "Hyper" = Genes_hyper,
+  "Down" = Genes_down,
+  "UP" = Genes_up,
+  "Hypo" = Genes_hypo
+)
+library(ggvenn)
+ggvenn(
+  Venn_promoter_diagramm, 
+  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"))
+ggsave("~/Venn_expression_methylation_promoter.png")
+
+
+
+venn.diagram(Venn_promoter_diagramm_up, filename = "../Results/Genes_up_regulated_methylation_state.png", imagetype = "png", )
+```
+
+```{r}
+Genes_up <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., logFC > 0.75 & P.Value < 0.05) %>%
+  .$ID
+
+Genes_DM <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., Methylation_p.value < 0.05 & abs(delta_methylation) > 0.1) %>%
+  .$ID
+
+Genes_down <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., logFC < -0.75 & P.Value < 0.05) %>%
+  .$ID
+
+Venn_promoter_diagramm <- list(
+  "DM" = Genes_DM,
+  "Down" = Genes_down,
+  "UP" = Genes_up
+)
+library(ggvenn)
+ggvenn(
+  Venn_promoter_diagramm, 
+  fill_color = c("#EFC000FF", "#868686FF", "#CD534CFF"))
+ggsave("~/Venn_expression_Dmethylation_promoter.png")
+
+```
+
+
+### Enhancer
+
+```{r}
+tmp <- names(Results[["Baseline_enhancer_analysis"]][["Enhancer_summary"]])
+  
+Gene_enhancer_methylation_analysis <- rbindlist(Results[["Baseline_enhancer_analysis"]][["Enhancer_summary"]]) %>% as.data.frame(.)
+rownames(Gene_enhancer_methylation_analysis) <- tmp
+
+Gene_methyl_enhancer_expression_data <- merge(Genes_expression, Gene_enhancer_methylation_analysis, by.x = "ID", by.y = 0)
+```
+
+
+```{r}
+nb_enhancer_treshold <- 1
+
+Number_Genes_Hypermethylated_no_changes <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & (P.Value > 0.05 | abs(logFC) < 0.75)) %>%
+  .$ID %>%
+  length()
+  
+Number_Genes_Hypermethylated_enh_suppressed <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & P.Value < 0.05 & logFC < -0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypermethylated_enh_surrexpressed <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & P.Value < 0.05 & logFC > 0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypomethylated_no_changes <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & (P.Value > 0.05 | abs(logFC)) < 0.75) %>%
+  .$ID %>%
+  length()
+  
+Number_Genes_Hypomethylated_enh_suppressed <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & P.Value < 0.05 & logFC < -0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypomethylated_enh_surrexpressed <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & P.Value < 0.05 & logFC > 0.75) %>%
+  .$ID %>%
+  length()
+
+Numbers <- c(Number_Genes_Hypermethylated_enh_suppressed, 
+             Number_Genes_Hypermethylated_no_changes, 
+             Number_Genes_Hypermethylated_enh_surrexpressed, 
+             Number_Genes_Hypomethylated_enh_suppressed, 
+             Number_Genes_Hypomethylated_no_changes, 
+             Number_Genes_Hypomethylated_enh_surrexpressed)
+
+
+Barplot_data <- data.frame(Gene_expression=rep(c("down_regulated", "no_changes", "up_regulated"), 2),
+                           Methylation=rep(c("Hypermethylated", "Hypomethylated"), each = 3),
+                           Number_of_genes = Numbers)
+
+ggplot(data=Barplot_data, aes(x=Methylation, y=Number_of_genes, fill=Gene_expression)) +
+  geom_bar(stat="identity")
+ggsave("~/correlation_methylation_enhancer_expression.png")
+```
+
+```{r}
+nb_enhancer_treshold <- 0
+
+Genes_up <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., logFC > 0.75 & P.Value < 0.05) %>%
+  .$ID
+
+Genes_hyper <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold) %>%
+  .$ID
+
+Genes_hypo <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold) %>%
+  .$ID
+
+Genes_down <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., logFC < -0.75 & P.Value < 0.05) %>%
+  .$ID
+
+Venn_promoter_diagramm <- list(
+  "Hyper" = Genes_hyper,
+  "Down" = Genes_down,
+  "UP" = Genes_up,
+  "Hypo" = Genes_hypo
+)
+library(ggvenn)
+ggvenn(
+  Venn_promoter_diagramm, 
+  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"))
+ggsave("~/Venn_expression_methylation_enhancer.png")
+```
+
+```{r}
+nb_enhancer_treshold <- 0
+
+Genes_up <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., logFC > 5.6 & P.Value < 0.05) %>%
+  .$ID
+
+Genes_DM <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold | nb_enhancer_hypo > nb_enhancer_treshold) %>%
+  .$ID
+
+Genes_down <- Gene_methyl_enhancer_expression_data %>% 
+  dplyr::filter(., logFC < -5.6 & P.Value < 0.05) %>%
+  .$ID
+
+Venn_promoter_diagramm <- list(
+  "DM" = Genes_DM,
+  "Down" = Genes_down,
+  "UP" = Genes_up
+)
+library(ggvenn)
+ggvenn(
+  Venn_promoter_diagramm, 
+  fill_color = c("#EFC000FF", "#868686FF", "#CD534CFF"))
+# ggsave("~/Venn_expression_Dmethylation_enhancer.png")
+```
+
+```{r}
+Genes_up_DM <- Gene_methyl_enhancer_expression_data %>% dplyr::filter(., logFC > 1 & P.Value < 0.05 & (nb_enhancer_hyper > nb_enhancer_treshold | nb_enhancer_hypo > nb_enhancer_treshold))
+Genes_down_DM <- Gene_methyl_enhancer_expression_data %>% dplyr::filter(., logFC < -1 & P.Value < 0.05 & (nb_enhancer_hyper > nb_enhancer_treshold | nb_enhancer_hypo > nb_enhancer_treshold))
+
+Gene_enhancer_DM_expression <- rbind(Genes_up_DM, Genes_down_DM)
+Gene_enhancer_DM_expression$logFC <- ifelse(Gene_enhancer_DM_expression$logFC > 1, log10(Gene_enhancer_DM_expression$logFC),  -log10(-Gene_enhancer_DM_expression$logFC))
+
+Gene_enhancer_DM_expression <- dplyr::filter(Gene_enhancer_DM_expression, abs(logFC) > 0.75)
+
+write.csv(Gene_enhancer_DM_expression, "../Results/Tables report/Gene lists/Gene_enhancer_DM_expression.csv", row.names = FALSE)
+```
+
+
+```{r}
+Gene_methyl_enhancer_expression_data_target_gene <- dplyr::filter(Gene_methyl_enhancer_expression_data, ID %in% c(Genes_Hypermethylated_suppressed$ID, Genes_Hypomethylated_suppressed$ID))
+
+nb_enhancer_treshold <- 1
+
+Number_Genes_Hypermethylated_no_changes <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & (P.Value > 0.05 | abs(logFC) < 0.75)) %>%
+  .$ID %>%
+  length()
+  
+Number_Genes_Hypermethylated_enh_suppressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & P.Value < 0.05 & logFC < -0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypermethylated_enh_surrexpressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & P.Value < 0.05 & logFC > 0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypomethylated_no_changes <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & (P.Value > 0.05 | abs(logFC)) < 0.75) %>%
+  .$ID %>%
+  length()
+  
+Number_Genes_Hypomethylated_enh_suppressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & P.Value < 0.05 & logFC < -0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypomethylated_enh_surrexpressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & P.Value < 0.05 & logFC > 0.75) %>%
+  .$ID %>%
+  length()
+
+Numbers <- c(Number_Genes_Hypermethylated_enh_suppressed, 
+             Number_Genes_Hypermethylated_no_changes, 
+             Number_Genes_Hypermethylated_enh_surrexpressed, 
+             Number_Genes_Hypomethylated_enh_suppressed, 
+             Number_Genes_Hypomethylated_no_changes, 
+             Number_Genes_Hypomethylated_enh_surrexpressed)
+
+
+Barplot_data <- data.frame(Gene_expression=rep(c("down_regulated", "no_changes", "up_regulated"), 2),
+                           Methylation=rep(c("Hypermethylated", "Hypomethylated"), each = 3),
+                           Number_of_genes = Numbers)
+
+ggplot(data=Barplot_data, aes(x=Methylation, y=Number_of_genes, fill=Gene_expression)) +
+  geom_bar(stat="identity")
+ggsave("~/correlation_methylation_enhancer_promoter_expression.png")
+```
+
+```{r}
+Gene_methyl_enhancer_expression_data_target_gene <- dplyr::filter(Gene_methyl_enhancer_expression_data, ID %in% c(Genes_hypermethylated_analysis$ID, Genes_hypomethylated_analysis$ID))
+
+nb_enhancer_treshold <- 1
+
+Number_Genes_Hypermethylated_no_changes <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & (P.Value > 0.05 | abs(logFC) < 0.75)) %>%
+  .$ID %>%
+  length()
+  
+Number_Genes_Hypermethylated_enh_suppressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & P.Value < 0.05 & logFC < -0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypermethylated_enh_surrexpressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hyper > nb_enhancer_treshold & P.Value < 0.05 & logFC > 0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypomethylated_no_changes <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & (P.Value > 0.05 | abs(logFC)) < 0.75) %>%
+  .$ID %>%
+  length()
+  
+Number_Genes_Hypomethylated_enh_suppressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & P.Value < 0.05 & logFC < -0.75) %>%
+  .$ID %>%
+  length()
+
+Number_Genes_Hypomethylated_enh_surrexpressed <- Gene_methyl_enhancer_expression_data_target_gene %>% 
+  dplyr::filter(., nb_enhancer_hypo > nb_enhancer_treshold & P.Value < 0.05 & logFC > 0.75) %>%
+  .$ID %>%
+  length()
+
+Numbers <- c(Number_Genes_Hypermethylated_enh_suppressed, 
+             Number_Genes_Hypermethylated_no_changes, 
+             Number_Genes_Hypermethylated_enh_surrexpressed, 
+             Number_Genes_Hypomethylated_enh_suppressed, 
+             Number_Genes_Hypomethylated_no_changes, 
+             Number_Genes_Hypomethylated_enh_surrexpressed)
+
+
+Barplot_data <- data.frame(Gene_expression=rep(c("down_regulated", "no_changes", "up_regulated"), 2),
+                           Methylation=rep(c("Hypermethylated", "Hypomethylated"), each = 3),
+                           Number_of_genes = Numbers)
+
+ggplot(data=Barplot_data, aes(x=Methylation, y=Number_of_genes, fill=Gene_expression)) +
+  geom_bar(stat="identity")
+```
+
+
+```{r}
+methyl_enhancer_ge_corr <- data.frame(logFC = Gene_methyl_enhancer_expression_data$logFC,
+                                      nb_enhancer_hypermethyl = Gene_methyl_enhancer_expression_data$nb_enhancer_hyper,
+                                      gene = Gene_methyl_enhancer_expression_data$ID)
+
+methyl_enhancer_ge_corr$logFC_GE <- ifelse(methyl_enhancer_ge_corr$logFC > 0, log(methyl_enhancer_ge_corr$logFC), -log(-methyl_enhancer_ge_corr$logFC))
+
+plot(x = methyl_enhancer_ge_corr$logFC_GE, y = methyl_enhancer_ge_corr$nb_enhancer_hypermethyl)
+```
+
+
+### logFC GE vs FC Met
+
+```{r}
+Genes_analysis <- Gene_methyl_expression_data_both_annotations %>%
+  dplyr::filter(., Methylation_p.value < 0.05 & P.Value < 0.05)
+
+methyl_ge_corr <- data.frame(logFC_M = Genes_analysis$delta_methylation,
+                                    FC_GE = Genes_analysis$logFC,
+                                    gene = Genes_analysis$ID)
+
+methyl_ge_corr$logFC_GE <- ifelse(methyl_ge_corr$FC_GE > 0, log(methyl_ge_corr$FC_GE), -log(-methyl_ge_corr$FC_GE))
+
+png("test2.png")
+plot(x = methyl_ge_corr$logFC_M, y = methyl_ge_corr$logFC_GE)
+dev.off()
+plot(x = methyl_ge_corr$logFC_M, y = methyl_ge_corr$logFC_GE)
+```
+
+```{r}
+Genes_hypermethylated_analysis <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., Methylation_p.value < 0.1 & delta_methylation > 0.1)
+
+enhancedvolcano_data1 <- data.frame(FC = Genes_hypermethylated_analysis$logFC,
+                                    p.value = Genes_hypermethylated_analysis$P.Value,
+                                    gene = Genes_hypermethylated_analysis$ID)
+
+enhancedvolcano_data1$logFC <- ifelse(enhancedvolcano_data1$FC > 0, log(enhancedvolcano_data1$FC), -log(-enhancedvolcano_data1$FC))
+
+EnhancedVolcano(toptable = enhancedvolcano_data1,
+                lab = enhancedvolcano_data1$gene,
+                x = "logFC",
+                y = "p.value",
+                FCcutoff = 0.75,
+                pCutoff = 0.1,
+                ylim = c(0, 5),
+                xlim = c(-15,15)
+                )
+ggsave("../Results/correlation_hypermetylation_expression.png")
+
+Genes_hypermethylated_analysis %>% 
+  dplyr::filter(., logFC < -0.75 & P.Value < 0.1) %>%
+  .$ID %>%
+  write.csv(., "../Results/Tables report/Gene lists/Genes_hypermeth_suppressed.csv", row.names = FALSE)
+
+Genes_hypermethylated_analysis %>% 
+  dplyr::filter(., logFC > 0.75 & P.Value < 0.1) %>%
+  .$ID %>%
+  write.csv(., "../Results/Tables report/Gene lists/Genes_hypermeth_surressed.csv", row.names = FALSE)
+```
+
+
+```{r}
+Genes_hypomethylated_analysis <- Gene_methyl_expression_data_both_annotations %>% 
+  dplyr::filter(., Methylation_p.value < 0.05 & delta_methylation < -0.1)
+
+enhancedvolcano_data2 <- data.frame(FC = Genes_hypomethylated_analysis$logFC,
+                                    p.value = Genes_hypomethylated_analysis$P.Value,
+                                    gene = Genes_hypomethylated_analysis$ID)
+
+enhancedvolcano_data2$logFC <- ifelse(enhancedvolcano_data2$FC > 0, log(enhancedvolcano_data2$FC), -log(-enhancedvolcano_data2$FC))
+
+EnhancedVolcano(toptable = enhancedvolcano_data2,
+                lab = enhancedvolcano_data2$gene,
+                x = "logFC",
+                y = "p.value",
+                FCcutoff = 0.75,
+                pCutoff = 0.05,
+                ylim = c(0, 5),
+                xlim = c(-15,15)
+                )
+ggsave("~/correlation_hypomethylation_expression.png")
+
+Genes_hypomethylated_analysis %>% 
+  dplyr::filter(., logFC > 0.75 & P.Value < 0.1) %>%
+  .$ID %>%
+  write.csv(., "../Results/Tables report/Gene lists/Genes_hypometh_surressed.csv", row.names = FALSE)
+
+Genes_hypomethylated_analysis %>% 
+  dplyr::filter(., logFC < -0.75 & P.Value < 0.1) %>%
+  .$ID %>%
+  write.csv(., "../Results/Tables report/Gene lists/Genes_hypometh_suppressed.csv", row.names = FALSE)
+```
+
+# After treatment
+
+```{r}
+A <- sapply(colnames(RNAseq_Wang_Feng), function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Non_Responder")
+  x %in% tmp$Relapse_RNAseq_data
+})
+
+B <- sapply(colnames(RNAseq_Wang_Feng), function(x){
+  tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Responder")
+  x %in% tmp$Relapse_RNAseq_data
+})
+
+tmp <- data.frame("Non_responder" = A, "Responder" = B)
+tmp$Phenotype <- ifelse(A, "Non_responder", ifelse(B, "Responder", "No_data"))
+
+ann_color_RNA <- list(
+    Phenotype = c(Responder = "blue", Non_responder = "red", No_data = "grey"))
+
+png("../Results/Heatmap_RNAseq_relapse.png")
+Make_heatmap(RNAseq_Wang_Feng, tmp, "pearson", "Non_responder & Responder", ann_color_RNA)
+dev.off()
+
+heatmap_Relapse <- Make_heatmap(RNAseq_Wang_Feng, tmp, "pearson", "Non_responder & Responder", ann_color_RNA)
+
+colnames(RNAseq_Wang_Feng)[heatmap_Baseline$tree_col[["order"]]][c(1:15)]
+
+batch = c(rep("A", 15), rep("B", 51-15))
+
+combat_edata1 = ComBat(dat=RNAseq_Wang_Feng, batch=batch, mod=NULL, par.prior=TRUE, prior.plots=FALSE)
+
+Make_heatmap(combat_edata1, tmp, "pearson", "Non_responder & Responder", ann_color_RNA, cuttree = 2)
+
+RNAseq_Wang_Feng_Baseline_analysis <- Differential_analysis(tmp$Phenotype, RNAseq_Wang_Feng)
+
 ```
 
