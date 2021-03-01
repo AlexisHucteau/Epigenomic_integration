@@ -385,10 +385,10 @@ ggsave("~/Venn_expression_Dmethylation_promoter.png")
 ### Enhancer
 
 ```{r}
-tmp <- names(Results[["Baseline_enhancer_analysis"]][["Enhancer_summary"]])
+tmp_names <- names(Results[["Baseline_enhancer_analysis"]][["Enhancer_summary"]])
   
 Gene_enhancer_methylation_analysis <- rbindlist(Results[["Baseline_enhancer_analysis"]][["Enhancer_summary"]]) %>% as.data.frame(.)
-rownames(Gene_enhancer_methylation_analysis) <- tmp
+rownames(Gene_enhancer_methylation_analysis) <- tmp_names
 
 Gene_methyl_enhancer_expression_data <- merge(Genes_expression, Gene_enhancer_methylation_analysis, by.x = "ID", by.y = 0)
 
@@ -533,13 +533,10 @@ fisher.test(table_fisher_test)
 ```
 
 ```{r}
-Genes_up_DM <- Gene_methyl_enhancer_expression_data %>% dplyr::filter(., logFC > 1 & P.Value < 0.05 & (nb_enhancer_hyper > nb_enhancer_treshold | nb_enhancer_hypo > nb_enhancer_treshold))
-Genes_down_DM <- Gene_methyl_enhancer_expression_data %>% dplyr::filter(., logFC < -1 & P.Value < 0.05 & (nb_enhancer_hyper > nb_enhancer_treshold | nb_enhancer_hypo > nb_enhancer_treshold))
+Genes_up_DM <- Gene_methyl_enhancer_expression_data %>% dplyr::filter(., logFC > 0.75 & P.Value < 0.05 & (nb_enhancer_hyper > nb_enhancer_treshold | nb_enhancer_hypo > nb_enhancer_treshold))
+Genes_down_DM <- Gene_methyl_enhancer_expression_data %>% dplyr::filter(., logFC < -0.75 & P.Value < 0.05 & (nb_enhancer_hyper > nb_enhancer_treshold | nb_enhancer_hypo > nb_enhancer_treshold))
 
 Gene_enhancer_DM_expression <- rbind(Genes_up_DM, Genes_down_DM)
-Gene_enhancer_DM_expression$logFC <- ifelse(Gene_enhancer_DM_expression$logFC > 1, log10(Gene_enhancer_DM_expression$logFC),  -log10(-Gene_enhancer_DM_expression$logFC))
-
-Gene_enhancer_DM_expression <- dplyr::filter(Gene_enhancer_DM_expression, abs(logFC) > 0.75)
 
 write.csv(Gene_enhancer_DM_expression, "../Results/Tables report/Gene lists/Gene_enhancer_DM_expression.csv", row.names = FALSE)
 ```
@@ -719,8 +716,6 @@ methyl_enhancer_ge_corr <- data.frame(logFC = Gene_methyl_enhancer_expression_da
                                       nb_enhancer_hypermethyl = Gene_methyl_enhancer_expression_data$nb_enhancer_hyper,
                                       gene = Gene_methyl_enhancer_expression_data$ID)
 
-methyl_enhancer_ge_corr$logFC_GE <- ifelse(methyl_enhancer_ge_corr$logFC > 0, log(methyl_enhancer_ge_corr$logFC), -log(-methyl_enhancer_ge_corr$logFC))
-
 plot(x = methyl_enhancer_ge_corr$logFC_GE, y = methyl_enhancer_ge_corr$nb_enhancer_hypermethyl)
 ```
 
@@ -857,6 +852,7 @@ pheatmap(tf_activities, col = viridis::inferno(50), column_title = "Transcriptio
 pheatmap(corr_TF, annotation_row = annotation_heatmap, annotation_colors = ann_color_RNA)
 
 ```
+
 ```{r}
 DATA_for_PCA <- RNAseq_Baselin_rownames
 DATA_for_PCA <- DATA_for_PCA %>%
@@ -981,13 +977,15 @@ tnodes <- tibble(TF = all_nodes)
 all_nodes_metadata <- right_join(msviper_results$mrs_table, tnodes, by = "TF")
 all_nodes_metadata$LogFC= RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC[match(all_nodes_metadata$TF,RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$ID)]
 
-TF = na.exclude(all_nodes_metadata$TF[all_nodes_metadata$pval<0.1]) %>% paste()
+all_nodes_metadata$LogFC <- ifelse(all_nodes_metadata$LogFC > 1, log(all_nodes_metadata$LogFC), ifelse(all_nodes_metadata$LogFC < -1 , -log(-all_nodes_metadata$LogFC), 0))
 
-data_stat = msviper_results$regulons[msviper_results$regulons$tf%in%TF,]
+TF <- na.exclude(all_nodes_metadata$TF[all_nodes_metadata$pval<0.1]) %>% paste()
+
+data_stat <- msviper_results$regulons[msviper_results$regulons$tf%in%TF,]
 
 res_TF <- RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]] %>%
                   dplyr::filter(., ID %in% unique(data_stat$target))
-res_TF= res_TF[res_TF$P.Value<0.05,]
+res_TF <- res_TF[res_TF$P.Value<0.05,]
 
 original_gene_list <- res_TF$logFC
 
@@ -998,7 +996,7 @@ names(original_gene_list) <- (rownames(res_TF))
 gene_list<-na.omit(original_gene_list)
 
 
-gene_list = sort(gene_list, decreasing = TRUE)
+gene_list <- sort(gene_list, decreasing = TRUE)
 
 ```
 

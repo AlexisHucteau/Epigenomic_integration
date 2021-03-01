@@ -1078,9 +1078,9 @@ T_test_on_methylation_enhancer <- function(Mean_CpGs_per_fragment, comparisons, 
   
   T_test_analysis <- lapply(T_test, function(x){
     if(x[["p.value"]] < 0.05){
-      if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0.2){
+      if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0.05){
         delta <- "Hyper"
-      }else if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] < -0.2){
+      }else if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] < -0.05){
         delta <- "Hypo"
       }else{
         delta <- "NULL"
@@ -1116,7 +1116,7 @@ T_test_on_methylation_enhancer <- function(Mean_CpGs_per_fragment, comparisons, 
     data.frame("nb_enhancer_hyper" = nb_enhancer_hyper, "nb_enhancer_hypo" = nb_enhancer_hypo, "nb_enhancer_unchanged" = nb_enhancer_unchanged, "total_enhancers" = nb_enhancer_hyper + nb_enhancer_hypo + nb_enhancer_unchanged)
   })
 
-  res[["Genes_with_hyper_enhancers"]] <- list.filter(res[["Enhancer_summary"]], nb_enhancer_hyper > 1)
+  res[["Genes_with_hyper_enhancers"]] <- list.filter(res[["Enhancer_summary"]], nb_enhancer_hyper > 0)
 
   res[["Genes_list_of_Genes_with_hyper_enhancers"]] <- res[["Genes_with_hyper_enhancers"]][list.order(res[["Genes_with_hyper_enhancers"]], (nb_enhancer_hyper))]
 
