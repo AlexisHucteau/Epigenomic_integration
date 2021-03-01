@@ -36,6 +36,7 @@ Differential_analysis <- function(Focused_variable, DATA, type_of_data = ""){
   }
   design <- model.matrix(~0 + Focused_variable)
   if (type_of_data == "gene_expression"){
+    print("norm")
     DATA <- voom(DATA, design, plot = FALSE)
   }
   contr.matrix <- design.pairs(levels(factor(Focused_variable)))
@@ -1077,10 +1078,12 @@ T_test_on_methylation_enhancer <- function(Mean_CpGs_per_fragment, comparisons, 
   
   T_test_analysis <- lapply(T_test, function(x){
     if(x[["p.value"]] < 0.05){
-      if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0){
+      if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] > 0.2){
         delta <- "Hyper"
-      }else{
+      }else if(x[["estimate"]]["mean of x"] - x[["estimate"]]["mean of y"] < -0.2){
         delta <- "Hypo"
+      }else{
+        delta <- "NULL"
       }
     }else{
       delta <- "NULL"
@@ -1132,3 +1135,216 @@ T_test_on_methylation_enhancer <- function(Mean_CpGs_per_fragment, comparisons, 
                                                         universe = Gene_universe)
   return(res)
 }
+
+####Miguel Functions for Viper
+
+# Function to convert a dorothea table to viper regulons
+
+# Function extracted from dorothea code
+# https://github.com/saezlab/dorothea/blob/master/R/helpers.R#L17
+dorothea2viper_regulons <- function(df) {
+  regulon_list <- split(df, df$tf)
+  viper_regulons <- lapply(regulon_list, function(regulon) {
+    tfmode <- stats::setNames(regulon$mor, regulon$target)
+    list(tfmode = tfmode, likelihood = rep(1, length(tfmode)))
+  })
+  
+  return(viper_regulons)
+}
+
+
+# Function to convert viper regulons to a dorothea table
+
+# Function extracted from
+# https://github.com/saezlab/ConservedFootprints/blob/master/src/dorothea_analysis.R#L126
+viper_regulons2dorothea <- function(r) {
+  res <- r %>%
+    map_df(
+      .f = function(i) {
+        tf_target <- i$tfmode %>%
+          enframe(name = "target", value = "mor") %>%
+          mutate(likelihood = i$likelihood)
+      },
+      .id = "tf"
+    )
+  return(res)
+}
+
+# Function to convert dorothea database and gene expression to aracne regulons
+
+# We need to create a network file where the first TF is the regulon with every target with a true confidence score
+# in our case from Dorothea it always be 1
+# Finally use it in aracne2regulon function from viper package
+dorothea2aracne2viper_regulons <- function(dorothea, exprs_m) {
+  dorothea_aggregation_tf <- dorothea %>%
+    select(tf, target) %>%
+    group_by(tf) %>%
+    summarise(targets = str_c(target, collapse = ";"))
+  tmp_file <- tempfile()
+  for (i in 1:nrow(dorothea_aggregation_tf)) {
+    tf_targets <- str_split(dorothea_aggregation_tf$targets[i], ";")[[1]]
+    row <- c(dorothea_aggregation_tf$tf[i], unlist(mapply(c, tf_targets, rep(1, length(tf_targets)), SIMPLIFY = F)))
+    cat(str_c(row, collapse = "\t"), "\n", file = tmp_file, append = T)
+  }
+  aracne_regulons <- aracne2regulon(tmp_file, exprs_m, format = "adj", verbose = F)
+  file.remove(tmp_file)
+  return(aracne_regulons)
+}
+
+
+# Main function to run msviper
+
+run_msviper <- function(exprs_m, dorothea, use_aracne, ref, ref_name, treat_name, minsize, ges.filter) {
+  # First we need to generate the phenotype table (AnnotatedDataFrame)
+  conditions <- rep(ref_name, ncol(exprs_m))
+  conditions[-ref] <- treat_name
+  
+  phenotype <- data.frame(condition = factor(conditions))
+  phenotype$condition[-ref] <- treat_name
+  rownames(phenotype) <- colnames(exprs_m)
+  
+  phenoData <- new("AnnotatedDataFrame", data = phenotype)
+  
+  # Create Expression set from phenotyble table and expression matrix
+  dset_viper <- ExpressionSet(assayData = exprs_m, phenoData = phenoData)
+  dset_viper$sampleID <- factor(colnames(exprs_m))
+  
+  # Aracne can be used to estimate the mor instead using the -1, 1 from dorothea
+  regulons <- NULL
+  if (use_aracne) {
+    regulons <- dorothea2aracne2viper_regulons(dorothea, dset_viper)
+  } else {
+    regulons <- dorothea2viper_regulons(dorothea)
+  }
+  
+  # We need to create the statistics signature from the conditions
+  signature <- rowTtest(dset_viper, "condition", treat_name, ref_name)
+  statistics_signature <- (qnorm(signature$p.value / 2, lower.tail = FALSE) * sign(signature$statistic))[, 1]
+  # Generate the null model with bootstrapping (1000 iterations)
+  nullmodel <- ttestNull(dset_viper, "condition", treat_name, ref_name, per = 1000, repos = T, verbose = F)
+  # Run msviper using the statistics signature, the regulons converted from dorothea table, the null model the minSize of regulon and the ges.filter
+  mrs <- msviper(ges = statistics_signature, regulon = regulons, nullmodel = nullmodel, minsize = minsize, ges.filter = ges.filter, verbose = F)
+  # Convert the msviper regulons to dorothea
+  dorothea_mrs_regulons <- viper_regulons2dorothea(mrs$regulon) %>%
+    mutate(state = ifelse(mor > 0, "activation", "inhibition"))
+  # Generate a table with the TFs, the regulon size, the NES score, the pval and the pval.fdr
+  mrs_table <- tibble(TF = names(mrs$es$p.value), size = mrs$es$size, nes = mrs$es$nes, pval = mrs$es$p.value, pval.fdr = p.adjust(mrs$es$p.value, method = "fdr")) %>% arrange(pval)
+  
+  list(mrs_table = mrs_table, mrs = mrs, regulons = dorothea_mrs_regulons)
+}
+
+
+# Extra function to generate the cytoscape networok from msviper result
+
+
+mrs2cytoscape <- function(mrs,full.path) {
+  
+  all_nodes <- unique(c(mrs$regulons$tf, mrs$regulons$target))
+  tnodes <- tibble(TF = all_nodes)
+  all_nodes_metadata <- right_join(mrs$mrs_table, tnodes, by = "TF")
+  regulons_network <- graph.data.frame(mrs$regulons, directed = T, vertices = all_nodes_metadata)
+  deleteAllNetworks()
+  createNetworkFromIgraph(regulons_network, "regulons_network")
+  # setVisualStyle(cytoscape_id_network, 'default')
+  # setVisualStyle("default")
+  
+  my_style <- "my_style"
+  
+  
+  
+  
+  
+  createVisualStyle(my_style, list())
+  setNodeColorDefault("#D3D3D3", style.name = my_style)
+  blue_white_red <- c("#0000FF", "#FFFFFF", "#FF0000")
+  setNodeColorMapping("nes", c(min(V(regulons_network)$nes, na.rm = T), mean(V(regulons_network)$nes, na.rm = T), max(V(regulons_network)$nes, na.rm = T)), blue_white_red, style.name = my_style)
+  
+  setEdgeTargetArrowShapeMapping("state", c("activation", "inhibition"), c("DELTA", "T"), style.name = my_style)
+  
+  setEdgeColorMapping("mor", c(min(E(regulons_network)$mor, na.rm = T), mean(E(regulons_network)$mor, na.rm = T), max(E(regulons_network)$mor, na.rm = T)), blue_white_red, style.name = my_style)
+  setNodeLabelMapping('id'
+  )
+  setVisualStyle("my_style")
+  
+  createColumnFilter(filter.name='null', column='pval', 0.05, 'GREATER_THAN', network = regulons_network)
+  applyFilter('null', hide=T, network = regulons_network)
+  
+  exportImage(full.path, 'SVG', zoom=200) 
+  
+}
+
+
+##Function for TF activities between two conditions
+
+tf_activities_function<- function(treatment,control,path){
+  
+  
+  data(dorothea_mm, package = "dorothea")
+  
+  
+  regulons = dorothea_mm %>%
+    filter(confidence %in% c("A", "B"))
+  
+  
+  
+  # In my case ref is LOW CDA expression
+  ref_name = control
+  # Versus HIGH CDA
+  treat_name= treatment
+  
+  # Expression matrix with all samples together
+  exprs_m= counts(RNAseqDatBatchCorrection$dds,normalized=T)[,RNAseqDatBatchCorrection$colData$condition%in%c(treat_name,ref_name)]
+  # ref to indicate the control samples
+  ref= which(RNAseqDatBatchCorrection$colData$condition[RNAseqDatBatchCorrection$colData$condition%in%c(treat_name,ref_name)]%in%c(ref_name))
+  
+  
+  
+  msviper_results <- run_msviper(exprs_m, regulons, use_aracne = T, ref, ref_name, treat_name, minsize = 4, ges.filter = T)
+  
+  #assay(RNAseqDatBatchCorrection$vsd_mat)
+  tf_activities <- run_viper(exprs_m, regulons, 
+                             options =  list(method = "scale", minsize = 4,eset.filter = FALSE, cores = 1, verbose = FALSE))
+  
+  
+  tf_activities=t(tf_activities) %>% as.data.frame()
+  
+  
+  tf_activities=aggregate(x = tf_activities,                # Specify data column
+                          by = list(RNAseqDatBatchCorrection$colData$condition[match(rownames(tf_activities),RNAseqDatBatchCorrection$colData$Sample)]),              # Specify group indicator
+                          FUN = mean) %>% column_to_rownames(var = "Group.1")
+  
+  tf_activities=as.data.frame(t(tf_activities))
+  
+  tf_activities$pval=  msviper_results$mrs_table$pval[match(rownames(tf_activities),msviper_results$mrs_table$TF)]
+  
+  tf_activities[is.na(tf_activities)]=1
+  
+  tf_activities$pval=ifelse(tf_activities$pval<0.05,"S","NS")
+  
+  palette_length = 100
+  my_color = colorRampPalette(c("Darkblue", "white","red"))(palette_length)
+  
+  
+  pvalue_col_fun = circlize::colorRamp2(unique(tf_activities$pval), c("red", "blue")) 
+  
+  
+  ha = rowAnnotation(pval = tf_activities$pval,annotation_legend_param = (pval = list(
+    title = "pval",
+    at = c("S", "NS"),
+    labels = c("S", "NS")
+  )))
+  
+  
+  ht= Heatmap(as.matrix(tf_activities %>% select(-pval)), col = viridis::inferno(50), column_title = paste0("Transcription Factor activities ",treat_name," vs ",ref_name), row_gap = unit(5, "mm"),column_gap =unit(5, "mm"),
+              left_annotation = rowAnnotation(pval = tf_activities$pval,annotation_legend_param = (pval = list(
+                title = "pval",
+                at = c("S", "NS"),
+                labels = c("S", "NS")
+              ))))
+  
+  
+  mrs2cytoscape(mrs=msviper_results,full.path = paste0("GitHub/Epigenomic_integration/Results/",treat_name,"_",ref_name))
+  
+  return(ht) 
+}
+
