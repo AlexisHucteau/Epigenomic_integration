@@ -239,6 +239,9 @@ heatmap_Baseline <- Make_heatmap(RNAseq_Wang_Feng_Baseline, tmp, "pearson", "Non
 
 RNAseq_Wang_Feng_Baseline_analysis <- Differential_analysis(tmp$Phenotype, RNAseq_Wang_Feng_Baseline)
 
+
+RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC <- ifelse(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC > 1, log(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC), ifelse(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC < -1 , -log(-RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC), 0))
+
 # RNAseq_Wang_Feng_Baseline_analysis_batch1_corrected <- Differential_analysis(tmp$Phenotype, combat_edata1)
 ```
 
@@ -378,6 +381,12 @@ ggvenn(
   Venn_promoter_diagramm, 
   fill_color = c("#EFC000FF", "#868686FF", "#CD534CFF"))
 ggsave("~/Venn_expression_Dmethylation_promoter.png")
+
+table_fisher_test_promoter <- data.frame("Methylated_promoter" = c(32, 324), "unmethylated_promoter" = c(897, 15215))
+rownames(table_fisher_test_promoter) <- c("DE", "no DE")
+
+fisher.test(table_fisher_test_promoter)
+
 
 ```
 
@@ -526,10 +535,11 @@ ggsave("~/Venn_expression_Dmethylation_enhancer.png")
 
 
 
-table_fisher_test <- data.frame("Methylated_enhancer" = c(genes_DM_DE, genes_DM_noDE), "unmethylated_enhancer" = c(genes_no_DM_DE, genes_no_DM_noDE))
+table_fisher_test <- data.frame("Methylated_enhancer" = c(624, 5941), "Unmethylated_enhancer" = c(650, 20512))
 rownames(table_fisher_test) <- c("DE", "no DE")
 
 fisher.test(table_fisher_test)
+
 ```
 
 ```{r}
@@ -771,7 +781,7 @@ combat_edata1 = ComBat(dat=RNAseq_Wang_Feng, batch=batch, mod=NULL, par.prior=TR
 
 Make_heatmap(combat_edata1, tmp_after, "pearson", "Non_responder & Responder", ann_color_RNA, cuttree = 2)
 
-RNAseq_Wang_Feng_Baseline_analysis <- Differential_analysis(tmp_after$Phenotype, RNAseq_Wang_Feng)
+RNAseq_Wang_Feng_After_analysis <- Differential_analysis(tmp_after$Phenotype, RNAseq_Wang_Feng)
 ```
 
 # TF analysis
@@ -875,13 +885,6 @@ fviz_pca_ind(res.pca,
 
 
 ```{r}
-t= Heatmap(t(tf_activities), col = viridis::inferno(50), row_km = 4, column_split = colnames(t(tf_activities)), row_gap = unit(5, "mm"))
-
-gse= enrichGO(colnames(tf_activities[,row_order(ht)$'4']),OrgDb = org.Hs.eg.db,keyType = "SYMBOL")
-```
-
-
-```{r}
 A <- sapply(rownames(tf_activities), function(x){
   tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Non_Responder")
   x %in% tmp$Baseline_RNAseq_data
@@ -956,6 +959,8 @@ treat_name <- "Non_Responder"
 
 msviper_results <- run_msviper(as.matrix(RNAseq_Baselin_rownames), regulons, use_aracne = T, ref, ref_name, treat_name, minsize = 4, ges.filter = T)
 
+msviper_results$regulons %>% write.csv("../Results/regulons_msviper.csv")
+
 original_gene_list <- RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC
 
 names(original_gene_list) <- RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$ID
@@ -971,6 +976,8 @@ expre = data.frame("TF"=names(gene_list),"LogFC"=paste(gene_list)  )
 msviper_results$mrs_table = left_join(msviper_results$mrs_table,expre,by="TF")
 msviper_results$mrs_table= replace( msviper_results$mrs_table, is.na( msviper_results$mrs_table), '0') 
 msviper_results$mrs_table$LogFC=  as.numeric(msviper_results$mrs_table$LogFC) 
+
+msviper_results$mrs_table %>% write.csv("../Results/stats_on_TFs.csv")
 
 all_nodes <- unique(c(msviper_results$regulons$tf, msviper_results$regulons$target))
 tnodes <- tibble(TF = all_nodes)
@@ -1000,4 +1007,46 @@ gene_list <- sort(gene_list, decreasing = TRUE)
 
 ```
 
+
+## Data for cytoscape
+
+```{r}
+Gene_annotations <- msviper_results$mrs_table
+all_column_names <- c("Gene_name", "Size", "nes", "TF_Pval", "TF_Pval_fdr","TF_logFC")
+colnames(Gene_annotations) <- all_column_names
+
+
+Gene_annotations <- merge(Gene_annotations, Tf_activities_phenotype, by.x = "Gene_name", by.y = 0, all =)
+all_column_names <- c(all_column_names, c("NR_TF_activity", "R_TF_activity", "delta_TF_activity"))
+colnames(Gene_annotations) <- all_column_names
+
+
+Gene_annotations <- merge(Gene_annotations, RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]], by.x = "Gene_name", by.y = "ID", all = TRUE) %>%
+  dplyr::select(c(1:10,13))
+all_column_names <- c(all_column_names, c("logFC_expression", "P.Value_expression"))
+colnames(Gene_annotations) <- all_column_names
+
+Gene_annotations <- merge(Gene_annotations, Results[["Basline_methylation_promoter"]]$Genes_methylation_analysis, by = "Gene_name", all = TRUE) 
+all_column_names <- c(all_column_names, c("P.Value_promoter_methylation", "NR_Promoter_Methylation", "R_Promoter_Methylation", "delta_promoter_methylation"))
+colnames(Gene_annotations) <- all_column_names
+
+Gene_annotations <-  merge(Gene_annotations, Gene_enhancer_methylation_analysis, by.x = "Gene_name", by.y = 0, all = TRUE)
+
+for (i in c(2,3, 6:10,13:19)){
+  Gene_annotations[,i] <- ifelse(is.na(Gene_annotations[,i]), 0.0, Gene_annotations[,i])
+}
+
+for (i in c(4, 5,11,12)){
+  Gene_annotations[,i] <- ifelse(is.na(Gene_annotations[,i]), 1.0, Gene_annotations[,i])
+  }
+
+
+
+write.csv(Gene_annotations, "../Results/Genes_values.csv")
+```
+
+
+```{r}
+
+```
 
