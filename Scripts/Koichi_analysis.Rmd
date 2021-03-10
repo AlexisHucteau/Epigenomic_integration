@@ -119,6 +119,19 @@ Results[["Basline_methylation_promoter"]] <- T_test_on_methylation_promoter(BMIQ
 
 ```
 
+#### Gene ontology
+
+```{r}
+png(filename = "../Results/Gene_ontology_promoter.png", width = 480*(16/9), height = 480)
+emapplot(Results[["Basline_methylation_promoter"]]$GO_hyper, color = "qvalue", size = "Count")
+dev.off()
+```
+
+```{r}
+emapplot(Results[["Basline_methylation_promoter"]]$GO_hypo, color = "qvalue", size = "Count")
+```
+
+
 ### Enhancer
 
 ```{r}
@@ -142,8 +155,24 @@ Results[["Baseline_enhancer_analysis"]] <- T_test_on_methylation_enhancer(Mean_C
                                Fragment_connected_per_gene = Overlap_data[["Fragment_connected_per_gene"]])
 
 Results[["Baseline_enhancer_analysis"]][["Genes_list_of_Genes_with_hyper_enhancers_annoted"]] %>% write.csv(., "../Results/Tables report/Baseline_enhancer_analysis_genes_hyper.csv")
+```
+
+#### Gene ontology
+```{r}
+png(filename = "../Results/Gene_ontology_enhancers.png", width = 480*(16/9), height = 480)
+dotplot(Results[["Baseline_enhancer_analysis"]]$GO, showCategory = 15)
+dev.off()
+
+dotplot(Results[["Baseline_enhancer_analysis"]]$GO, showCategory = 15)
+emapplot(Results[["Baseline_enhancer_analysis"]]$GO, color = "qvalue", size = "Count")
+
+png(filename = "../Results/Gene_ontology_enhancers_map.png", width = 360*(16/9), height = 360)
+emapplot(Results[["Baseline_enhancer_analysis"]]$GO, color = "qvalue", size = "Count")
+dev.off()
 
 ```
+
+
 
 ## After treatment Non_responder vs Responder
 
@@ -223,6 +252,8 @@ tmp$Phenotype <- ifelse(C, "Non_responder", ifelse(D, "Responder", "No_data"))
 ann_color_RNA <- list(
     Phenotype = c(Responder = "blue", Non_responder = "red", No_data = "grey"))
 
+
+
 png("../Results/Heatmap_RNAseq_Baseline.png")
 Make_heatmap(RNAseq_Wang_Feng_Baseline, tmp, "pearson", "Non_responder & Responder", ann_color_RNA)
 dev.off()
@@ -243,7 +274,139 @@ RNAseq_Wang_Feng_Baseline_analysis <- Differential_analysis(tmp$Phenotype, RNAse
 RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC <- ifelse(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC > 1, log(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC), ifelse(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC < -1 , -log(-RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC), 0))
 
 # RNAseq_Wang_Feng_Baseline_analysis_batch1_corrected <- Differential_analysis(tmp$Phenotype, combat_edata1)
+
+Genes_diff_expressed <- dplyr::filter(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]], abs(logFC) > 0.75 & P.Value < 0.05) %>% 
+  .$ID
 ```
+
+
+### Clustering 
+
+```{r}
+colnames(RNAseq_Baselin_rownames) <- substring(colnames(RNAseq_Baselin_rownames), 2,11)
+corr_RNA <- rcorr(as.matrix(RNAseq_Baselin_rownames), type = "pearson")$r
+
+annotation_heatmap <- data.frame("Phenotype" = tmp$Phenotype)
+rownames(annotation_heatmap) <- rownames(tmp)
+
+ann_color_RNA <- list(
+    Phenotype = c(Responder = "blue", Non_responder = "red")
+    )
+
+png("../Results/Corr_RNAseq.png",  width = 360*(4/3), height = 360)
+pheatmap(corr_RNA, annotation_row = annotation_heatmap, annotation_col = annotation_heatmap, annotation_colors = ann_color_RNA, show_rownames = FALSE, show_colnames = FALSE, annotation_names_row = FALSE)
+dev.off()
+```
+
+
+
+
+```{r}
+RNA_DM_enhancer_promoter <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% c(Genes_DM_enhancer,Genes_DM_promoter)),]
+
+png("../Results/Clustering_Baseline_based_on_gene_with_promoter_or_enhancer_methylated.png", width = 360*(16/9), height = 360)
+Make_heatmap(RNA_DM_enhancer_promoter, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer/promoter)", ann_color_RNA)
+dev.off()
+```
+
+```{r}
+RNA_DM_enhancer_promoter <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% c(Genes_DM_enhancer,Genes_DM_promoter)),]
+colnames(RNA_DM_enhancer_promoter) <- substring(colnames(RNA_DM_enhancer_promoter), 2,11)
+
+pheatmap(as.matrix(RNA_DM_enhancer_promoter),
+main="AML Patient Clustering based on Gene expression Data filtered for DM (promoter/enhancer)",
+show_rownames = FALSE,
+annotation_col = annotation_heatmap,
+annotation_colors = ann_color_RNA,
+clustering_distance_rows="euclidean",
+scale = "column")
+```
+
+```{r}
+RNA_DM_enhancer_Down <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer_Down),]
+colnames(RNA_DM_enhancer_Down) <- substring(colnames(RNA_DM_enhancer_Down), 2,11)
+
+png("../Results/Clustering_Baseline_based_on_gene_Down_with_enhancer_methylated.png", width = 360*(16/9), height = 360)
+Make_heatmap(RNA_DM_enhancer_Down, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & Down", ann_color_RNA)
+dev.off()
+```
+
+```{r}
+RNA_DM_enhancer_DE <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer_DE),]
+colnames(RNA_DM_enhancer_DE) <- substring(colnames(RNA_DM_enhancer_DE), 2,11)
+
+png("../Results/Clustering_Baseline_based_on_gene_with_enhancer_methylated.png", width = 360*(16/9), height = 360)
+Make_heatmap(RNA_DM_enhancer_DE, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & DE", ann_color_RNA)
+dev.off()
+```
+
+```{r}
+RNA_DM_enhancer_Down <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer_),]
+colnames(RNA_DM_enhancer_DE) <- substring(colnames(RNA_DM_enhancer_DE), 2,11)
+
+Make_heatmap(RNA_DM_enhancer_DE, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & DE", ann_color_RNA)
+```
+
+
+```{r}
+RNA_DM_promoter <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_promoter),] 
+colnames(RNA_DM_promoter) <- substring(colnames(RNA_DM_promoter), 2,11)
+outliers <- which(colnames(RNA_DM_promoter) %ni% c("2292915_BL", "2163337_BL"))
+Phenotype_no_outliers <- which(rownames(tmp) %ni% c("2292915_BL", "2163337_BL"))
+
+Phenotype_no_outliers <- tmp[Phenotype_no_outliers,]
+RNA_DM_promoter <- dplyr::select(RNA_DM_promoter, outliers)
+
+png("../Results/Clustering_Baseline_based_on_gene_with_promoter_methylated.png", width = 360*(16/9), height = 360)
+Make_heatmap(RNA_DM_promoter, Phenotype = Phenotype_no_outliers, "pearson", "Non_responder & Responder based on Genes DM (promoter)", ann_color_RNA)
+dev.off()
+```
+
+```{r}
+pheatmap(as.matrix(RNA_DM_promoter),
+main="AML Patient Clustering based on Gene expression Data filtered for DM (promoter)",
+show_rownames = FALSE,
+annotation_col = annotation_heatmap,
+annotation_colors = ann_color_RNA,
+clustering_distance_rows="euclidean")
+```
+
+
+```{r}
+RNA_DM_enhancer <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer),]
+colnames(RNA_DM_enhancer) <- substring(colnames(RNA_DM_enhancer), 2,11)
+
+Make_heatmap(RNA_DM_enhancer, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer)", ann_color_RNA)
+```
+
+```{r}
+pheatmap(as.matrix(RNA_DM_enhancer),
+main="AML Patient Clustering based on Gene expression Data filtered for DM (enhancer)",
+show_rownames = FALSE,
+annotation_col = annotation_heatmap,
+annotation_colors = ann_color_RNA,
+clustering_distance_rows="euclidean",
+scale = "column")
+```
+
+
+
+```{r}
+RNA_DE <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% c(Genes_diff_expressed)),]
+colnames(RNA_DE) <- substring(colnames(RNA_DE), 2,11)
+
+Make_heatmap(RNA_DE, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DE", ann_color_RNA)
+```
+
+```{r}
+pheatmap(as.matrix(RNA_DE),
+main="AML Patient Clustering based on Gene expression Data filtered for DE genes",
+show_rownames = FALSE,
+annotation_col = annotation_heatmap,
+annotation_colors = ann_color_RNA,
+clustering_distance_rows="euclidean")
+```
+
 
 ```{r}
 Genes_methylation <- Results[["Basline_methylation_promoter"]]$Genes_methylation_analysis
@@ -355,7 +518,7 @@ library(ggvenn)
 ggvenn(
   Venn_promoter_diagramm, 
   fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"))
-ggsave("~/Venn_expression_methylation_promoter.png")
+#ggsave("~/Venn_expression_methylation_promoter.png")
 ```
 
 ```{r}
@@ -380,7 +543,7 @@ library(ggvenn)
 ggvenn(
   Venn_promoter_diagramm, 
   fill_color = c("#EFC000FF", "#868686FF", "#CD534CFF"))
-ggsave("~/Venn_expression_Dmethylation_promoter.png")
+#ggsave("~/Venn_expression_Dmethylation_promoter.png")
 
 table_fisher_test_promoter <- data.frame("Methylated_promoter" = c(32, 324), "unmethylated_promoter" = c(897, 15215))
 rownames(table_fisher_test_promoter) <- c("DE", "no DE")
@@ -748,6 +911,33 @@ dev.off()
 plot(x = methyl_ge_corr$logFC_M, y = methyl_ge_corr$logFC_GE)
 ```
 
+### Gene ontology analyse
+
+```{r}
+RNA_up_GO <- Gene_annotations %>% dplyr::filter(P.Value_expression < 0.05 & logFC_expression < -0.75) %>%
+  .$Gene_name %>%
+  unique() %>%
+  enrichGO(keyType = "SYMBOL",
+         OrgDb = "org.Hs.eg.db",
+         ont = "BP",
+         pAdjustMethod = "none",
+         universe = dplyr::filter(Gene_annotations, P.Value_expression != 1)$Gene_name)
+
+dotplot(RNA_up_GO, showCategory = 30)
+```
+
+```{r}
+RNA_DM_prom_GO <- enrichGO(Genes_DM_promoter,
+         keyType = "SYMBOL",
+         OrgDb = "org.Hs.eg.db",
+         ont = "BP",
+         pAdjustMethod = "none",
+         universe = dplyr::filter(Gene_annotations, P.Value_expression != 1 & P.Value_promoter_methylation != 1)$Gene_name)
+
+dotplot(RNA_DM_prom_GO, showCategory = 30, title = "RNA_DM_prom_GO")
+```
+
+
 # After treatment
 
 ```{r}
@@ -842,21 +1032,20 @@ tmp$Cluster[which(is.na(tmp$Cluster))] <- "No_data"
 
 colnames(tmp) <- c("Non_Responder", "Responder", "Phenotype", "Cluster")
 
-annotation_heatmap <- data.frame("Phenotype" = tmp$Phenotype,
-                                 "Clusters" = tmp$Cluster)
+annotation_heatmap <- data.frame("Phenotype" = tmp$Phenotype)
 rownames(annotation_heatmap) <- rownames(tmp)
 
 ann_color_RNA <- list(
-    Phenotype = c(Responder = "blue", Non_responder = "red", No_data = "grey"),
-    Clusters = c(cluster1 = "blue", cluster2 = "red", No_data = "grey"))
+    Phenotype = c(Responder = "blue", Non_responder = "red")
+    )
 
 corr_TF <- rcorr(as.matrix(t(tf_activities)), type = "pearson")$r
 png("../Results/tf_activities.png", height = 1080, width = 1920)
 pheatmap(tf_activities, col = viridis::inferno(50), column_title = "Transcription Factor activities", annotation_row = annotation_heatmap, annotation_colors = ann_color_RNA)
 dev.off()
 
-png("../Results/Corr_patient_tf.png", height = 1080, width = 1920)
-pheatmap(corr_TF, annotation_row = annotation_heatmap, annotation_colors = ann_color_RNA)
+png("../Results/Corr_patient_tf.png",  width = 360*(4/3), height = 360)
+pheatmap(corr_TF, annotation_row = annotation_heatmap, annotation_col = annotation_heatmap, annotation_colors = ann_color_RNA, show_rownames = FALSE, show_colnames = FALSE, annotation_names_row = FALSE)
 dev.off()
 pheatmap(tf_activities, col = viridis::inferno(50), column_title = "Transcription Factor activities", annotation_row = annotation_heatmap, annotation_colors = ann_color_RNA)
 pheatmap(corr_TF, annotation_row = annotation_heatmap, annotation_colors = ann_color_RNA)
@@ -1040,13 +1229,236 @@ for (i in c(4, 5,11,12)){
   Gene_annotations[,i] <- ifelse(is.na(Gene_annotations[,i]), 1.0, Gene_annotations[,i])
   }
 
-
+Gene_annotations$nb_enhancer_changed <- Gene_annotations$nb_enhancer_hyper + Gene_annotations$nb_enhancer_hypo
 
 write.csv(Gene_annotations, "../Results/Genes_values.csv")
 ```
 
+# Venn diagramms
 
 ```{r}
+Genes_up_promoter <- Gene_annotations %>% 
+  dplyr::filter(., P.Value_promoter_methylation != 1 & (logFC_expression > 0.75 & P.Value_expression < 0.05)) %>%
+  .$Gene_name %>%
+  unique()
 
+Genes_down_promoter <- Gene_annotations %>% 
+  dplyr::filter(., P.Value_promoter_methylation != 1 & (logFC_expression < -0.75 & P.Value_expression < 0.05)) %>%
+  .$Gene_name %>% 
+  unique()
+
+Genes_DM_promoter <- Gene_annotations %>% 
+  dplyr::filter(., P.Value_expression != 1 & P.Value_promoter_methylation < 0.05 & abs(delta_promoter_methylation) > 0.1) %>%
+  .$Gene_name %>% 
+  unique()
+
+Genes_noDE_no_DM_promoter <- Gene_annotations %>% 
+  dplyr::filter(., P.Value_promoter_methylation != 1 & P.Value_expression != 1 & (abs(logFC_expression) < 0.75 | P.Value_expression > 0.05) & (P.Value_promoter_methylation > 0.1 | abs(delta_promoter_methylation) < 0.1)) %>%
+  .$Gene_name %>% 
+  unique()
+
+Venn_promoter_diagramm <- list(
+  "DM" = Genes_DM_promoter,
+  "Down" = Genes_down_promoter,
+  "UP" = Genes_up_promoter
+)
+library(ggvenn)
+ggvenn(
+  Venn_promoter_diagramm, 
+  fill_color = c("#EFC000FF", "#868686FF", "#CD534CFF"))
+ggsave("~/Venn_expression_Dmethylation_promoter.png")
+
+table_fisher_test_promoter <- data.frame("Methylated_promoter" = 
+                                           c(length(intersect(c(Genes_up_promoter, Genes_down_promoter), Genes_DM_promoter)),
+                                             length(setdiff(Genes_DM_promoter, c(Genes_up_promoter, Genes_down_promoter)))), 
+                                         "unmethylated_promoter" = 
+                                           c(length(setdiff(c(Genes_up_promoter, Genes_down_promoter), Genes_DM_promoter)), 
+                                             length(Genes_noDE_no_DM_promoter)))
+
+rownames(table_fisher_test_promoter) <- c("DE", "no DE")
+
+fisher.test(table_fisher_test_promoter)
+```
+
+
+```{r}
+Genes_up_enhancer <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & logFC_expression > 0.75 & P.Value_expression < 0.05) %>%
+  .$Gene_name %>%
+  unique()
+
+Genes_down_enhancer <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & logFC_expression < -0.75 & P.Value_expression < 0.05) %>%
+  .$Gene_name %>% 
+  unique()
+
+Genes_DM_enhancer <- Gene_annotations %>% 
+  dplyr::filter(.,  P.Value_expression != 1 & (nb_enhancer_hyper > 0 | nb_enhancer_hypo > 0)) %>%
+  .$Gene_name %>%
+  unique()
+
+Genes_noDE_no_DM_enhancer <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & P.Value_expression != 1 & nb_enhancer_changed == 0 & (abs(logFC_expression) < 0.75 | P.Value_expression > 0.05)) %>%
+  .$Gene_name %>% 
+  unique()
+
+Venn_enhancer_diagramm <- list(
+  "DM_enhancer" = Genes_DM_enhancer,
+  "Down" = Genes_down,
+  "UP" = Genes_up
+)
+
+ggvenn(
+  Venn_enhancer_diagramm, 
+  fill_color = c("#EFC000FF", "#868686FF", "#CD534CFF"))
+ggsave("~/Venn_expression_Dmethylation_enhancer.png")
+
+table_fisher_test_enhancer <- data.frame("Methylated_enhancer" = 
+                                           c(length(intersect(c(Genes_up_enhancer, Genes_down_enhancer), Genes_DM_enhancer)),
+                                             length(setdiff(Genes_DM_enhancer, c(Genes_up_enhancer, Genes_down_enhancer)))), 
+                                         "unmethylated_enhancer" = 
+                                           c(length(setdiff(c(Genes_up_enhancer, Genes_down_enhancer), Genes_DM_enhancer)), 
+                                             length(Genes_noDE_no_DM_enhancer)))
+
+rownames(table_fisher_test_enhancer) <- c("DE", "no DE")
+
+fisher.test(table_fisher_test_enhancer)
+```
+
+
+```{r}
+Genes_up_enhancer_promoter <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & P.Value_promoter_methylation != 1 & logFC_expression > 0.75 & P.Value_expression < 0.05) %>%
+  .$Gene_name %>%
+  unique()
+
+Genes_down_enhancer_promoter <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0& P.Value_promoter_methylation != 1 & logFC_expression < -0.75 & P.Value_expression < 0.05) %>%
+  .$Gene_name %>% 
+  unique()
+
+Genes_DM_enhancer_promoter <- Gene_annotations %>% 
+  dplyr::filter(.,  P.Value_expression != 1 & (nb_enhancer_hyper > 0 | nb_enhancer_hypo > 0) & P.Value_promoter_methylation < 0.1 & abs(delta_promoter_methylation) > 0.1) %>%
+  .$Gene_name %>%
+  unique()
+
+Genes_noDE_no_DM_enhancer_or_promoter <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & P.Value_expression != 1 & (nb_enhancer_changed == 0 | P.Value_promoter_methylation > 0.1 | abs(delta_promoter_methylation) < 0.1) & (abs(logFC_expression) < 0.75 | P.Value_expression > 0.05)) %>%
+  .$Gene_name %>% 
+  unique()
+
+Venn_enhancer_promoter_diagramm <- list(
+  "DM_enhancer_promoter" = Genes_DM_enhancer_promoter,
+  "Down" = Genes_down_enhancer_promoter,
+  "UP" = Genes_up_enhancer_promoter
+)
+
+ggvenn(
+  Venn_enhancer_promoter_diagramm, 
+  fill_color = c("#EFC000FF", "#868686FF", "#CD534CFF"))
+ggsave("~/Venn_expression_Dmethylation_enhancer_promoter.png")
+
+table_fisher_test_enhancer_promoter <- data.frame("Methylated_enhancer_promoter" = 
+                                           c(length(intersect(c(Genes_up_enhancer_promoter, Genes_down_enhancer_promoter), Genes_DM_enhancer_promoter)),
+                                             length(setdiff(Genes_DM_enhancer_promoter, c(Genes_up_enhancer_promoter, Genes_down_enhancer_promoter)))), 
+                                         "unmethylated_enhancer" = 
+                                           c(length(setdiff(c(Genes_up_enhancer_promoter, Genes_down_enhancer_promoter), Genes_DM_enhancer_promoter)), 
+                                             length(Genes_noDE_no_DM_enhancer_or_promoter)))
+
+rownames(table_fisher_test_enhancer_promoter) <- c("DE", "no DE")
+
+fisher.test(table_fisher_test_enhancer_promoter)
+```
+
+
+
+
+```{r}
+Genes_DM_enhancer_Down <- intersect(c(Genes_down_enhancer), Genes_DM_enhancer)
+
+Genes_enhancer_unviverse <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & P.Value_expression != 1) %>%
+  .$Gene_name %>% 
+  unique()
+
+Results[["Gene_ontology_Enhancer_methylation_and_Down"]] <- enrichGO(Genes_DM_enhancer_Down, 
+         keyType = "SYMBOL",
+         OrgDb = "org.Hs.eg.db",
+         ont = "BP",
+         pAdjustMethod = "none",
+         universe = Genes_enhancer_unviverse)
+
+ora_analysis_all_go_simplified <- clusterProfiler::simplify(Results[["Gene_ontology_Enhancer_methylation_and_Down"]]) 
+
+
+svg(filename = "../Results/Gene_ontology_enhancers_DownExp_map.svg", width = 360*(16/9), height = 360)
+emapplot(Results[["Gene_ontology_Enhancer_methylation_and_Down"]], color = "qvalue", size = "Count")
+dev.off()
+emapplot(Results[["Gene_ontology_Enhancer_methylation_and_Down"]], color = "qvalue", size = "Count")
+
+dotplot(Results[["Gene_ontology_Enhancer_methylation_and_Down"]], showCategory = 30)
+```
+
+```{r}
+Genes_DM_enhancer_DE <- intersect(c(Genes_down_enhancer, Genes_up_enhancer), Genes_DM_enhancer)
+
+Genes_enhancer_unviverse <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & P.Value_expression != 1) %>%
+  .$Gene_name %>% 
+  unique()
+
+Results[["Gene_ontology_Enhancer_methylation_and_DE"]] <- enrichGO(Genes_DM_enhancer_DE, 
+         keyType = "SYMBOL",
+         OrgDb = "org.Hs.eg.db",
+         ont = "BP",
+         pAdjustMethod = "none",
+         universe = Genes_enhancer_unviverse)
+
+ora_analysis_all_go_simplified <- clusterProfiler::simplify(Results[["Gene_ontology_Enhancer_methylation_and_DE"]]) 
+
+
+#png(filename = "../Results/Gene_ontology_enhancers_DownExp_map.png", width = 360*(16/9), height = 360)
+#emapplot(Results[["Gene_ontology_Enhancer_methylation_and_GE"]], color = "qvalue", size = "Count")
+#dev.off()
+emapplot(Results[["Gene_ontology_Enhancer_methylation_and_DE"]], color = "qvalue", size = "Count")
+
+dotplot(Results[["Gene_ontology_Enhancer_methylation_and_DE"]], showCategory = 30)
+```
+
+```{r}
+Genes_DM_enhancer_Up <- intersect(c(Genes_up_enhancer), Genes_DM_enhancer)
+
+Genes_enhancer_unviverse <- Gene_annotations %>% 
+  dplyr::filter(., total_enhancers > 0 & P.Value_expression != 1) %>%
+  .$Gene_name %>% 
+  unique()
+
+Results[["Gene_ontology_Enhancer_methylation_and_UP"]] <- enrichGO(Genes_DM_enhancer_Up, 
+         keyType = "SYMBOL",
+         OrgDb = "org.Hs.eg.db",
+         ont = "BP",
+         pAdjustMethod = "none",
+         universe = Genes_enhancer_unviverse)
+
+ora_analysis_all_go_simplified_UP <- clusterProfiler::simplify(Results[["Gene_ontology_Enhancer_methylation_and_UP"]]) 
+
+
+#png(filename = "../Results/Gene_ontology_enhancers_DownExp_map.png", width = 360*(16/9), height = 360)
+#emapplot(Results[["Gene_ontology_Enhancer_methylation_and_GE"]], color = "qvalue", size = "Count")
+#dev.off()
+emapplot(Results[["Gene_ontology_Enhancer_methylation_and_UP"]], color = "qvalue", size = "Count")
+
+dotplot(Results[["Gene_ontology_Enhancer_methylation_and_UP"]], showCategory = 30)
+```
+
+```{r}
+Genes_metabo_DM_enhancer <- c("COX6A1","COX7A2L","NDUFA4", "STM3","MGST1","MGST3")
+
+RNA_selected_genes <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_metabo_DM_enhancer),]
+colnames(RNA_selected_genes) <- substring(colnames(RNA_selected_genes), 2,11)
+
+png("../Results/Clustering_Baseline_based_on_gene_metabo_DM_enhancer.png", width = 360*(16/9), height = 360)
+Make_heatmap(RNA_selected_genes, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes metabo DM enhancer", ann_color_RNA)
+dev.off()
 ```
 
