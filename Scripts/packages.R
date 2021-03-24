@@ -35,3 +35,5 @@ library(dorothea)
 library(viper)
 library(org.Hs.eg.db)
 library(tidyverse)
+
+#look at gene annotation cpgs

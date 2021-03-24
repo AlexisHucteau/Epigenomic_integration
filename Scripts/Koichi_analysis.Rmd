@@ -42,6 +42,16 @@ tmp_data[["CpGs_EPIC_Non_Promoter_Koichi"]] <- Overlap_data[["EPIC_CpG_chromatin
   unique(.)
 ```
 
+```{r}
+ann_color_Meth <- list(
+    Phenotype = c(Responder = "blue", Non_Responder = "red"))
+
+png("../Results/Clustering_Baseline_dna_methylation.png", width = 360*(16/9), height = 360)
+Make_heatmap(BMIQ_list[["Baseline_Methylation"]], Phenotype = Phenotypes[["Baseline_Methylation"]], "pearson", "Non_responder & Responder based on DNA methylation",  ann_color_Meth)
+dev.off()
+```
+
+
 ### Enhancer Koichi preparation
 
 ```{r}
@@ -268,6 +278,8 @@ heatmap_Baseline <- Make_heatmap(RNAseq_Wang_Feng_Baseline, tmp, "pearson", "Non
 # 
 # Make_heatmap(combat_edata1, tmp, "pearson", "Non_responder & Responder", ann_color_RNA)
 
+RNAseq_Wang_Feng_Baseline <- voom(RNAseq_Wang_Feng_Baseline)
+
 RNAseq_Wang_Feng_Baseline_analysis <- Differential_analysis(tmp$Phenotype, RNAseq_Wang_Feng_Baseline)
 
 
@@ -296,6 +308,7 @@ ann_color_RNA <- list(
 png("../Results/Corr_RNAseq.png",  width = 360*(4/3), height = 360)
 pheatmap(corr_RNA, annotation_row = annotation_heatmap, annotation_col = annotation_heatmap, annotation_colors = ann_color_RNA, show_rownames = FALSE, show_colnames = FALSE, annotation_names_row = FALSE)
 dev.off()
+pheatmap(corr_RNA, annotation_row = annotation_heatmap, annotation_col = annotation_heatmap, annotation_colors = ann_color_RNA, show_rownames = FALSE, show_colnames = FALSE, annotation_names_row = FALSE)
 ```
 
 
@@ -303,6 +316,7 @@ dev.off()
 
 ```{r}
 RNA_DM_enhancer_promoter <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% c(Genes_DM_enhancer,Genes_DM_promoter)),]
+Make_heatmap(RNA_DM_enhancer_promoter, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer/promoter)", ann_color_RNA)
 
 png("../Results/Clustering_Baseline_based_on_gene_with_promoter_or_enhancer_methylated.png", width = 360*(16/9), height = 360)
 Make_heatmap(RNA_DM_enhancer_promoter, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer/promoter)", ann_color_RNA)
@@ -325,6 +339,7 @@ scale = "column")
 ```{r}
 RNA_DM_enhancer_Down <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer_Down),]
 colnames(RNA_DM_enhancer_Down) <- substring(colnames(RNA_DM_enhancer_Down), 2,11)
+Make_heatmap(RNA_DM_enhancer_Down, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & Down", ann_color_RNA)
 
 png("../Results/Clustering_Baseline_based_on_gene_Down_with_enhancer_methylated.png", width = 360*(16/9), height = 360)
 Make_heatmap(RNA_DM_enhancer_Down, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & Down", ann_color_RNA)
@@ -334,6 +349,7 @@ dev.off()
 ```{r}
 RNA_DM_enhancer_DE <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer_DE),]
 colnames(RNA_DM_enhancer_DE) <- substring(colnames(RNA_DM_enhancer_DE), 2,11)
+Make_heatmap(RNA_DM_enhancer_DE, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & DE", ann_color_RNA)
 
 png("../Results/Clustering_Baseline_based_on_gene_with_enhancer_methylated.png", width = 360*(16/9), height = 360)
 Make_heatmap(RNA_DM_enhancer_DE, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & DE", ann_color_RNA)
@@ -341,7 +357,7 @@ dev.off()
 ```
 
 ```{r}
-RNA_DM_enhancer_Down <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer_),]
+RNA_DM_enhancer_Down <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% Genes_DM_enhancer),]
 colnames(RNA_DM_enhancer_DE) <- substring(colnames(RNA_DM_enhancer_DE), 2,11)
 
 Make_heatmap(RNA_DM_enhancer_DE, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DM (enhancer) & DE", ann_color_RNA)
@@ -395,17 +411,33 @@ scale = "column")
 RNA_DE <- RNAseq_Baselin_rownames[which(rownames(RNAseq_Baselin_rownames) %in% c(Genes_diff_expressed)),]
 colnames(RNA_DE) <- substring(colnames(RNA_DE), 2,11)
 
-Make_heatmap(RNA_DE, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DE", ann_color_RNA)
+Make_heatmap(voom(RNA_DE)$E, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes DE", ann_color_RNA)
 ```
 
 ```{r}
-pheatmap(as.matrix(RNA_DE),
+pheatmap(as.matrix(voom(RNA_DE)$E),
 main="AML Patient Clustering based on Gene expression Data filtered for DE genes",
 show_rownames = FALSE,
 annotation_col = annotation_heatmap,
 annotation_colors = ann_color_RNA,
 clustering_distance_rows="euclidean")
 ```
+
+```{r}
+Genes_target <- read.csv("../Results/regulons_msviper.csv(2) default node.csv") %>% .$name %>% str_remove_all("\"")
+
+target_RNA <- RNAseq_Baselin_rownames %>% .[which(rownames(RNAseq_Baselin_rownames) %in% Genes_target),]
+
+target_RNA <- voom(target_RNA)
+
+pheatmap(as.matrix(target_RNA$E),
+  main="AML Patient Clustering based on Genes DE connected to TF DA",
+  show_rownames = TRUE,
+  annotation_col = annotation_heatmap,
+  annotation_colors = ann_color_RNA,
+  clustering_distance_rows="euclidean")
+```
+
 
 
 ```{r}
@@ -977,7 +1009,7 @@ RNAseq_Wang_Feng_After_analysis <- Differential_analysis(tmp_after$Phenotype, RN
 # TF analysis
 
 ```{r}
-RNAseq_Baselin_rownames <- RNAseq_Wang_Feng_Baseline
+RNAseq_Baselin_rownames <- RNAseq_Wang_Feng_Baseline$E %>% as.data.frame()
 
 
 RNAseq_Baselin_rownames$Gene <- rownames(RNAseq_Baselin_rownames) %>% str_split(., "[|]") %>% lapply(., function(x){
@@ -1009,7 +1041,7 @@ gene_rownames <- rownames(RNAseq_Wang_Feng_Baseline) %>% str_split(., "[|]") %>%
   unique(.)
 rownames(RNAseq_Baselin_rownames) <- gene_rownames
 
-data(dorothea_hs, package = "dorothea")
+data(dorothea_hs, package = "dorothea") 
 regulons = dorothea_hs %>%
   filter(confidence %in% c("A", "B"))
 tf_activities <- run_viper(RNAseq_Baselin_rownames, regulons, 
@@ -1148,7 +1180,9 @@ treat_name <- "Non_Responder"
 
 msviper_results <- run_msviper(as.matrix(RNAseq_Baselin_rownames), regulons, use_aracne = T, ref, ref_name, treat_name, minsize = 4, ges.filter = T)
 
-msviper_results$regulons %>% write.csv("../Results/regulons_msviper.csv")
+msviper_results$regulons$mor_cytoscape <- abs(msviper_results$regulons$mor)
+
+msviper_results$regulons %>% write.csv("../Results/regulons_msviper.csv", row.names = FALSE)
 
 original_gene_list <- RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC
 
@@ -1205,7 +1239,7 @@ all_column_names <- c("Gene_name", "Size", "nes", "TF_Pval", "TF_Pval_fdr","TF_l
 colnames(Gene_annotations) <- all_column_names
 
 
-Gene_annotations <- merge(Gene_annotations, Tf_activities_phenotype, by.x = "Gene_name", by.y = 0, all =)
+Gene_annotations <- merge(Gene_annotations, Tf_activities_phenotype, by.x = "Gene_name", by.y = 0, all = TRUE)
 all_column_names <- c(all_column_names, c("NR_TF_activity", "R_TF_activity", "delta_TF_activity"))
 colnames(Gene_annotations) <- all_column_names
 
@@ -1231,7 +1265,7 @@ for (i in c(4, 5,11,12)){
 
 Gene_annotations$nb_enhancer_changed <- Gene_annotations$nb_enhancer_hyper + Gene_annotations$nb_enhancer_hypo
 
-write.csv(Gene_annotations, "../Results/Genes_values.csv")
+write.csv(Gene_annotations, "../Results/Genes_values.csv", row.names = FALSE)
 ```
 
 # Venn diagramms
