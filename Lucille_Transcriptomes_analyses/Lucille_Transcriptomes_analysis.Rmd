@@ -1,0 +1,159 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+source("packages.R")
+source("functions.R")
+```
+
+# Importation Transcriptomes
+
+```{r, include=F}
+Transcriptomes <- Prepare_Transcriptomic_microarray_data("../DATA_RNAseq_Lucille/", "../DATA_RNAseq_Lucille/Samplesheet.sdrf.csv")
+Transcriptomes$Phenotype$Name <- str_replace_all(Transcriptomes$Phenotype$Array.Data.File, "[-() #]", ".")
+```
+
+# PCA Analysis
+
+```{r}
+DATA_for_PCA <- as.matrix(t(Transcriptomes$Transcriptomes))
+
+PCA_analysis(DATA_for_PCA)
+```
+
+```{r}
+Analysis_DGEs_cell_line <- DGEs(Transcriptomes$Transcriptomes, Transcriptomes$Phenotype$Characteristics.cell.line., Transcriptomes$Annot)
+
+Phenotypes <- paste(Transcriptomes$Phenotype$Characteristics.cell.line., Transcriptomes$Phenotype$Characteristics.medium., Transcriptomes$Phenotype$Characteristics.genotype., Transcriptomes$Phenotype$Characteristics.treatment., sep = "_")
+
+Transcriptomes$Phenotype$Phenotypes <- Phenotypes
+rm(Phenotypes)
+Analysis_DGEs_phenotype <- DGEs(Transcriptomes$Transcriptomes, Transcriptomes$Phenotype$Phenotypes, Transcriptomes$Annot)
+```
+
+```{r}
+volcanoplot_gene_expression(Analysis_DGEs_cell_line$`HL60-MOLM14`, "HL60_vs_MOLM14", ylim = 30)
+```
+
+```{r}
+volcanoplot_gene_expression(Analysis_DGEs_phenotype$`HL60_MEMalpha_Mut_DMF-MOLM14_MEMalpha_Mut_DMF`, "HL60_vs_MOLM14_MEMa_DMF_Mut", ylim = 30)
+```
+
+```{r}
+volcanoplot_gene_expression(Analysis_DGEs_phenotype$`HL60_MEMalpha_Mut_AGI5198-MOLM14_MEMalpha_Mut_AGI5198`, "HL60_vs_MOLM14_MEMa_IDHi_Mut", ylim = 30)
+```
+
+```{r}
+Transcriptomes$Transcriptomes_gene_filtered <- merge(Transcriptomes$Transcriptomes, Transcriptomes$Annot, by.x = 0, by.y = "Row.names", all = T) %>%
+  dplyr::filter(., SYMBOL != "NA") %>%
+  split(., .$SYMBOL) %>% 
+  lapply(., function(x){
+    l <- length(x[1,])-3
+    cnames <- colnames(x)[c(2:l)]
+    df <- x[,c(2:l)] %>%
+      as.matrix(.) %>%
+      colMeans(.) %>% 
+      data.frame(.) %>%
+      t(.) %>%
+      data.frame(.)
+    colnames(df) <- cnames
+    df
+  }) %>%
+  rbindlist(.) %>% 
+  data.frame(.)
+
+rownames(Transcriptomes$Transcriptomes_gene_filtered) <- unique(Transcriptomes$Annot$SYMBOL)[-1]
+colnames(Transcriptomes$Transcriptomes_gene_filtered) <- str_remove_all(colnames(Transcriptomes$Transcriptomes_gene_filtered), "X")
+
+
+data(dorothea_hs, package = "dorothea")
+regulons = dorothea_hs %>%
+  filter(confidence %in% c("A", "B"))
+
+tf_activities <- run_viper(Transcriptomes$Transcriptomes_gene_filtered, regulons, 
+                           options =  list(method = "scale", minsize = 4, eset.filter = FALSE, cores = 1, verbose = FALSE))
+tf_activities=t(tf_activities) %>% as.data.frame()
+```
+
+
+```{r}
+TF_activities <- list()
+
+TF_activities[["HL60_Tf_Activities"]] <- tf_activities %>%
+  .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Characteristics.cell.line. == "HL60")],] %>%
+  as.matrix(.) %>%
+  colMeans2(.) %>%
+  as.data.frame(.)
+
+TF_activities[["MOLM14_Tf_Activities"]] <- tf_activities %>%
+  .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Characteristics.cell.line. == "MOLM14")],] %>%
+  as.matrix(.) %>%
+  colMeans2(.) %>%
+  as.data.frame(.)
+
+TF_activities[["HL60_MEMalpha_Mut_DMF_Tf_Activities"]] <- tf_activities %>%
+  .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Phenotypes == "HL60_MEMalpha_Mut_DMF")],] %>%
+  as.matrix(.) %>%
+  colMeans2(.) %>%
+  as.data.frame(.)
+
+TF_activities[["HL60_MEMalpha_Mut_AGI5198_Tf_Activities"]] <- tf_activities %>%
+  .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Phenotypes == "HL60_MEMalpha_Mut_AGI5198")],] %>%
+  as.matrix(.) %>%
+  colMeans2(.) %>%
+  as.data.frame(.)
+
+TF_activities[["MOLM14_MEMalpha_Mut_DMF_Tf_Activities"]] <- tf_activities %>%
+  .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Phenotypes == "MOLM14_MEMalpha_Mut_DMF")],] %>%
+  as.matrix(.) %>%
+  colMeans2(.) %>%
+  as.data.frame(.)
+
+TF_activities[["MOLM14_MEMalpha_Mut_AGI5198_Tf_Activities"]] <- tf_activities %>%
+  .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Phenotypes == "MOLM14_MEMalpha_Mut_AGI5198")],] %>%
+  as.matrix(.) %>%
+  colMeans2(.) %>%
+  as.data.frame(.)
+
+TF_activities <- lapply(TF_activities, function(x){
+  t(x) %>% data.frame()
+})
+```
+
+```{r}
+Tf_activities_phenotype <- rbindlist(TF_activities) %>% t()
+
+colnames(Tf_activities_phenotype) <- names(TF_activities) %>% str_remove_all("_Tf_Activities")
+colnames(Tf_activities_phenotype) <- colnames(Tf_activities_phenotype) %>% str_remove_all("_MEMalpha_Mut")
+rownames(Tf_activities_phenotype) <- colnames(tf_activities) 
+```
+
+```{r}
+png("Pheatmap_tf_activities_cell_lines.png")
+pheatmap(as.matrix(Tf_activities_phenotype),
+  main="TF activities based on cell line",
+  show_rownames = FALSE,
+  clustering_distance_rows="euclidean",
+  scale = "column")
+dev.off()
+pheatmap(as.matrix(Tf_activities_phenotype),
+  main="TF activities based on cell line",
+  show_rownames = FALSE,
+  clustering_distance_rows="euclidean",
+  scale = "column")
+```
+
+
+```{r}
+Differential_TF_analysis <- list()
+
+Differential_TF_analysis[["HL60_vs_MOLM14"]] <- Differential_TF_activities_t_test(tf_activities, "HL60", "MOLM14", Transcriptomes$Phenotype$Characteristics.cell.line.)
+
+Differential_TF_analysis[["HL60_no_treat_vs_MOLM14_no_treat"]] <- Differential_TF_activities_t_test(tf_activities, "HL60_MEMalpha_Mut_DMF", "MOLM14_MEMalpha_Mut_DMF", Transcriptomes$Phenotype$Phenotypes)
+
+Differential_TF_analysis[["HL60_w_inhib_vs_MOLM14_w_inhib"]] <- Differential_TF_activities_t_test(tf_activities, "HL60_MEMalpha_Mut_AGI5198", "MOLM14_MEMalpha_Mut_AGI5198", Transcriptomes$Phenotype$Phenotypes)
+```
+
