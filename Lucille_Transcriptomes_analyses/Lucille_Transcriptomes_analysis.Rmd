@@ -71,7 +71,7 @@ colnames(Transcriptomes$Transcriptomes_gene_filtered) <- str_remove_all(colnames
 
 data(dorothea_hs, package = "dorothea")
 regulons = dorothea_hs %>%
-  filter(confidence %in% c("A", "B"))
+  dplyr::filter(confidence %in% c("A", "B"))
 
 tf_activities <- run_viper(Transcriptomes$Transcriptomes_gene_filtered, regulons, 
                            options =  list(method = "scale", minsize = 4, eset.filter = FALSE, cores = 1, verbose = FALSE))
@@ -202,5 +202,15 @@ Genes_values_inhib <- dplyr::mutate_at(Genes_values_inhib, c(3, 4, 5), funs(repl
 Genes_values_inhib <- dplyr::mutate_at(Genes_values_inhib, c(2, 6, 7), funs(replace(., is.na(.), 0)))
 
 write.csv(Genes_values_inhib, "Genes_values_inhib.csv", row.names = F)
+```
+
+```{r}
+Genes_all_values_all_comparisons <- cbind(Genes_values_All_Mut, Genes_values_no_inhib, Genes_values_inhib)
+
+colnames(Genes_all_values_all_comparisons) <- c("Gene_name", "logFC_HL60_MOLM14", "P.Value_HL60_MOLM14", "adj.P.Val_HL60_MOLM14", "p.value_activities_HL60_MOLM14", "HL60", "MOLM14", "Gene_name", "logFC_no_inhib", "P.Value_no_inhib", "adj.P.Val_no_inhib", "p.value_activities_no_inhib", "HL60_no_inhib", "MOLM14_no_inhib", "Gene_name", "logFC_inhib", "P.Value_inhib", "adj.P.Val_inhib", "p.value_activities_inhib", "HL60_inhib", "MOLM14_inhib")
+
+Genes_all_values_all_comparisons <- dplyr::select(Genes_all_values_all_comparisons, c(1:7, 9:14, 16:21))
+
+write.csv(Genes_all_values_all_comparisons, "Genes_all_values_all_comparisons.csv", row.names = F)
 ```
 
