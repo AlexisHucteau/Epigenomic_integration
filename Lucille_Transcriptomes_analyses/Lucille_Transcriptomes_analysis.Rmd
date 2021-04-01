@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 
-```{r}
+```{r, include=FALSE}
 source("packages.R")
 source("functions.R")
 ```
@@ -25,7 +25,7 @@ PCA_analysis(DATA_for_PCA)
 ```
 
 ```{r}
-Analysis_DGEs_cell_line <- DGEs(Transcriptomes$Transcriptomes, Transcriptomes$Phenotype$Characteristics.cell.line., Transcriptomes$Annot)
+Analysis_DGEs_cell_line <- DGEs(Transcriptomes$Transcriptomes, paste(Transcriptomes$Phenotype$Characteristics.cell.line., Transcriptomes$Phenotype$Characteristics.genotype., sep = "_"), Transcriptomes$Annot)
 
 Phenotypes <- paste(Transcriptomes$Phenotype$Characteristics.cell.line., Transcriptomes$Phenotype$Characteristics.medium., Transcriptomes$Phenotype$Characteristics.genotype., Transcriptomes$Phenotype$Characteristics.treatment., sep = "_")
 
@@ -35,7 +35,7 @@ Analysis_DGEs_phenotype <- DGEs(Transcriptomes$Transcriptomes, Transcriptomes$Ph
 ```
 
 ```{r}
-volcanoplot_gene_expression(Analysis_DGEs_cell_line$`HL60-MOLM14`, "HL60_vs_MOLM14", ylim = 30)
+volcanoplot_gene_expression(Analysis_DGEs_cell_line$`HL60_Mut-MOLM14_Mut`, "HL60_vs_MOLM14", ylim = 30)
 ```
 
 ```{r}
@@ -83,7 +83,7 @@ tf_activities=t(tf_activities) %>% as.data.frame()
 TF_activities <- list()
 
 TF_activities[["HL60_Tf_Activities"]] <- tf_activities %>%
-  .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Characteristics.cell.line. == "HL60")],] %>%
+  .[Transcriptomes$Phenotype$Name[which(paste(Transcriptomes$Phenotype$Characteristics.cell.line., Transcriptomes$Phenotype$Characteristics.genotype., sep = "_") == "HL60_Mut")],] %>%
   as.matrix(.) %>%
   colMeans2(.) %>%
   as.data.frame(.)
@@ -155,5 +155,52 @@ Differential_TF_analysis[["HL60_vs_MOLM14"]] <- Differential_TF_activities_t_tes
 Differential_TF_analysis[["HL60_no_treat_vs_MOLM14_no_treat"]] <- Differential_TF_activities_t_test(tf_activities, "HL60_MEMalpha_Mut_DMF", "MOLM14_MEMalpha_Mut_DMF", Transcriptomes$Phenotype$Phenotypes)
 
 Differential_TF_analysis[["HL60_w_inhib_vs_MOLM14_w_inhib"]] <- Differential_TF_activities_t_test(tf_activities, "HL60_MEMalpha_Mut_AGI5198", "MOLM14_MEMalpha_Mut_AGI5198", Transcriptomes$Phenotype$Phenotypes)
+```
+
+
+```{r}
+Differential_TF_analysis_data_frame <- merge(Differential_TF_analysis[["HL60_vs_MOLM14"]], Differential_TF_analysis[["HL60_no_treat_vs_MOLM14_no_treat"]], by.x = 0, by.y = 0) %>% merge(Differential_TF_analysis[["HL60_w_inhib_vs_MOLM14_w_inhib"]], by.x = "Row.names", by.y = 0)
+
+rownames(Differential_TF_analysis_data_frame) <- Differential_TF_analysis_data_frame$Row.names
+Differential_TF_analysis_data_frame <- Differential_TF_analysis_data_frame[,-1]
+```
+
+```{r}
+dplyr::filter(Differential_TF_analysis_data_frame, p.value_activities < 0.1 & p.value_activities.x < 0.1 & p.value_activities.y < 0.1)
+```
+
+
+
+```{r}
+Genes_values_All_Mut <- dplyr::select(Analysis_DGEs_cell_line$`HL60_Mut-MOLM14_Mut`, c(2,5,6,9)) %>%
+  dplyr::filter(., SYMBOL != "NA") %>%
+  merge(., Differential_TF_analysis[["HL60_vs_MOLM14"]], by.x = "SYMBOL", by.y = 0, all = T)
+
+Genes_values_All_Mut <- dplyr::mutate_at(Genes_values_All_Mut, c(3, 4, 5), funs(replace(., is.na(.), 1)))
+Genes_values_All_Mut <- dplyr::mutate_at(Genes_values_All_Mut, c(2, 6, 7), funs(replace(., is.na(.), 0)))
+
+write.csv(Genes_values_All_Mut, "Genes_values_All_mut.csv", row.names = F)
+```
+
+```{r}
+Genes_values_no_inhib <- dplyr::select(Analysis_DGEs_phenotype$`HL60_MEMalpha_Mut_DMF-MOLM14_MEMalpha_Mut_DMF`, c(2,5,6,9)) %>%
+  dplyr::filter(., SYMBOL != "NA") %>%
+  merge(., Differential_TF_analysis[["HL60_no_treat_vs_MOLM14_no_treat"]], by.x = "SYMBOL", by.y = 0, all = T)
+
+Genes_values_no_inhib <- dplyr::mutate_at(Genes_values_no_inhib, c(3, 4, 5), funs(replace(., is.na(.), 1)))
+Genes_values_no_inhib <- dplyr::mutate_at(Genes_values_no_inhib, c(2, 6, 7), funs(replace(., is.na(.), 0)))
+
+write.csv(Genes_values_no_inhib, "Genes_values_no_inhib.csv", row.names = F)
+```
+
+```{r}
+Genes_values_inhib <- dplyr::select(Analysis_DGEs_phenotype$`HL60_MEMalpha_Mut_AGI5198-MOLM14_MEMalpha_Mut_AGI5198`, c(2,5,6,9)) %>%
+  dplyr::filter(., SYMBOL != "NA") %>%
+  merge(., Differential_TF_analysis[["HL60_w_inhib_vs_MOLM14_w_inhib"]], by.x = "SYMBOL", by.y = 0, all = T)
+
+Genes_values_inhib <- dplyr::mutate_at(Genes_values_inhib, c(3, 4, 5), funs(replace(., is.na(.), 1)))
+Genes_values_inhib <- dplyr::mutate_at(Genes_values_inhib, c(2, 6, 7), funs(replace(., is.na(.), 0)))
+
+write.csv(Genes_values_inhib, "Genes_values_inhib.csv", row.names = F)
 ```
 
