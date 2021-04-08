@@ -112,7 +112,8 @@ TF_activities[["MOLM14_MEMalpha_Mut_DMF_Tf_Activities"]] <- tf_activities %>%
   colMeans2(.) %>%
   as.data.frame(.)
 
-TF_activities[["MOLM14_MEMalpha_Mut_AGI5198_Tf_Activities"]] <- tf_activities %>%
+TF_activities[["MOLM14_MEMalpha_Mut_AGI5198_Tf_Activities"]] <- tf_acti
+vities %>%
   .[Transcriptomes$Phenotype$Name[which(Transcriptomes$Phenotype$Phenotypes == "MOLM14_MEMalpha_Mut_AGI5198")],] %>%
   as.matrix(.) %>%
   colMeans2(.) %>%

@@ -1,0 +1,374 @@
+UPN GENE TYPE AA_CHANGE VAF
+757509 DNMT3A nonsynonymous DNMT3A:uc002rgd.4:exon17:c.C2012T:p.T671M 0.508671
+757509 EP300 frameshift insertion EP300:uc003azl.4:exon9:c.1771dupA:p.A590fs 0.15254237
+757509 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.C418T:p.R140W 0.191589
+757509 SRSF2 nonframeshift deletion SRSF2:uc010wtg.2:exon1:c.281_292del:p.94_98del 0.25
+757509 TET2 frameshift deletion TET2:uc021xqk.1:exon3:c.1363delC:p.P455fs 0.05945946
+974025 ASXL1 frameshift deletion ASXL1:uc021wbw.1:exon13:c.1926delA:p.G642fs 0.162
+974025 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.45
+974025 NRAS nonsynonymous NRAS:uc009wgu.3:exon2:c.G37C:p.G13R 0.312
+974025 PHF6 stopgain PHF6:uc010nrr.3:exon5:c.C385T:p.R129X 0.395
+0.365
+974025 RUNX1 stopgain RUNX1:uc002yur.1:exon2:c.318_319ins5773:p.P10
+7_P108delinsX 1446307 GATA2 nonsynonymous GATA2:uc003ekm.3:exon5:c.C911T:p.P304L 0.155319
+1446307 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394G:p.R132G 0.519231
+SRSF2:uc010wtg.2:exon1:c.279_326del:p.93_109de
+l
+ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs
+1446307 SRSF2 nonframeshift deletion
+0.32352941
+1794247 ASXL1 frameshift insertion 1794247 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.421829
+1799723 ASXL1 stopgain ASXL1:uc021wbw.1:exon13:c.A2473T:p.K825X 0.134058
+1799723 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.264501
+0.25384615
+0.20134228
+1799723 SF3B1 nonframeshift deletion SF3B1:uc002uue.3:exon14:c.1854_1856del:p.618_6
+19del 1825001 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.096939
+1825001 WT1 nonsynonymous WT1:uc001mto.2:exon9:c.G1385C:p.R462P 0.047817
+1850651 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.447661
+0.475
+1850651 SRSF2 nonframeshift deletion SRSF2:uc010wtg.2:exon1:c.284_307del:p.95_103de
+l 1873085 ASXL1 frameshift deletion ASXL1:uc021wbw.1:exon13:c.2422delC:p.P808fs 0.31557377
+1873085 DNMT3A nonsynonymous DNMT3A:uc002rgd.4:exon18:c.C2125T:p.P709S 0.401639
+1873085 DNMT3A nonsynonymous DNMT3A:uc002rgd.4:exon21:c.G2409T:p.R803S 0.395745
+1873085 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.38874
+1873085 RUNX1 splicing RUNX1:uc010gmw.1:exon6:c.508+2T>A 0.375
+0.296875
+1956615 ASXL1 frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 1956615 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.488889
+1956615 NRAS nonsynonymous NRAS:uc009wgu.3:exon2:c.G37C:p.G13R 0.154255
+1956615 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.470032
+2010157 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.A514T:p.R172W 0.28169
+2150901 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.G395A:p.R132H 0.318267
+2150901 MGA nonsynonymous MGA:uc010ucy.2:exon17:c.G6125C:p.C2042S 0.027314
+2150901 MGA nonsynonymous MGA:uc010ucy.2:exon17:c.G6202C:p.E2068Q 0.026354
+2150901 MGA nonsynonymous MGA:uc010ucy.2:exon17:c.G6472C:p.A2158P 0.035541
+2150901 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon5:c.G497A:p.R166Q 0.282534
+nonframeshift insertion RUNX1:uc010gmw.1:exon7:c.677_678insGAG:p.S2
+26delinsRS 0.19285714
+2150901
+RUNX12150901 SRSF2 nonsynonymous
+SRSF2:uc010wtg.2:exon1:c.C284G:p.P95R 0.31769
+2151503 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.316872
+0.39597315
+2151503 MYB frameshift insertion MYB:uc010kgi.3:exon9:c.1109_1110insGATTGGG
+TGGG:p.S370fs 2151503 NRAS nonsynonymous NRAS:uc009wgu.3:exon2:c.G34T:p.G12C 0.017906
+2151503 PTPN11 nonsynonymous PTPN11:uc001ttx.3:exon3:c.C215A:p.A72D 0.152174
+2151503 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon4:c.C337G:p.P113A 0.250804
+2151503 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G592A:p.D198N 0.230769
+2151503 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.360324
+2151503 TET2 frameshift deletion TET2:uc021xqk.1:exon3:c.2747delA:p.Q916fs 0.04651163
+2152641 ASXL1 stopgain ASXL1:uc021wbw.1:exon13:c.C2616A:p.C872X 0.245098
+2152641 CEBPA frameshift insertion CEBPA:uc002nun.3:exon1:c.749dupG:p.G250fs 0.05084746
+2152641 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.275
+2152641 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284T:p.P95L 0.313725
+STAG2:uc004eud.3:exon11:c.1010_1012del:p.337_
+338del
+ASXL1:uc021wbw.1:exon13:c.1772dupA:p.Y591_Q
+592delinsX
+2152641 STAG2 nonframeshift deletion 2163337 ASXL1 stopgain 2163337 BCOR frameshift insertion BCOR:uc004dep.4:exon14:c.4834dupC:p.L1612fs 0.07317073
+2163337 DNMT3A nonsynonymous DNMT3A:uc002rgd.4:exon6:c.G494A:p.G165D 0.489914
+2163337 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.415403
+2163337 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.480211
+2163337 STAG2 frameshift deletion STAG2:uc004eud.3:exon5:c.257_261del:p.E86fs 1
+2210551 CEBPA stopgain CEBPA:uc002nun.3:exon1:c.C484T:p.Q162X 0.526316
+2210551 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.479833
+2210551 MPL stopgain MPL:uc009vwr.3:exon12:c.C1753T:p.R585X 0.499366
+2210551 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.487342
+2210551 TP53 nonsynonymous TP53:uc010cni.2:exon7:c.A704G:p.N235S 0.43609
+2210551 WT1 stopgain WT1:uc001mto.2:exon7:c.C1105T:p.R369X 0.533911
+ASXL1:uc021wbw.1:exon13:c.3633_3636del:p.D12
+11fs
+DNMT3A:uc002rgd.4:exon18:c.2083_2096del:p.I69
+5fs
+0.49700599
+0.35048232
+2219711 ASXL1 frameshift deletion
+0.38586957
+2219711 DNMT3A frameshift deletion 2219711 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.287335
+2219711 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G592T:p.D198Y 0.558304
+2219711 SF3B1 nonsynonymous SF3B1:uc002uue.3:exon15:c.A2098G:p.K700E 0.308609
+2219711 TET2 frameshift deletion TET2:uc021xqk.1:exon3:c.408_429del:p.S136fs 0.5
+0.31284916
+0.41666667
+2219711 TET2 frameshift insertion TET2:uc021xqk.1:exon3:c.623_624insTAATGGTG
+CTACAGTTTCTGCCTCT:p.P208fs 2221709 ASXL1 stopgain ASXL1:uc021wbw.1:exon13:c.G2113T:p.E705X 0.263
+2221709 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon16:c.G1904A:p.R635Q 0.532
+2221709 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.272
+2221709 RB1 stopgain RB1:uc001vcb.3:exon12:c.C1190G:p.S397X 0.228
+2221709 SMC1A splicing SMC1A:uc011moe.2:exon1:c.109+450G>T 0.238
+2221709 STAG2 stopgain STAG2:uc004eud.3:exon8:c.C629A:p.S210X 0.124
+2222935 CEBPA nonsynonymous CEBPA:uc002nun.3:exon1:c.T992A:p.L331Q 0.2741942222935 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon10:c.T1232C:p.L411P 0.253012
+2222935 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon20:c.A2366C:p.H789P 0.307317
+2222935 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.305322
+2222935 STAG2 frameshift deletion STAG2:uc004eud.3:exon10:c.885delT:p.H295fs 0.28365385
+2222935 ZNF639 stopgain ZNF639:uc003fjr.1:exon7:c.G869A:p.W290X 0.318284
+ASXL1:uc021wbw.1:exon13:c.1888_1910del:p.630
+_637del 0.13402062
+2244043 ASXL1 frameshift deletion 2244043 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.133333
+0.15736041
+2246061 ASXL1 frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 2246061 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.053981
+2246061 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.083624
+2246061 STAG2 frameshift deletion STAG2:uc004eud.3:exon30:c.3101delG:p.R1034fs 0.15591398
+2246061 TBXA2R nonsynonymous TBXA2R:uc021umv.1:exon2:c.C272G:p.A91G 0.141026
+2246061 TBXA2R nonsynonymous TBXA2R:uc021umv.1:exon2:c.G284C:p.W95S 0.139764
+2246709 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.41256
+2246709 PTPN11 nonsynonymous PTPN11:uc001ttx.3:exon3:c.C215T:p.A72V 0.109091
+2246709 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon5:c.G485A:p.R162K 0.894403
+2246709 SF3B1 nonsynonymous SF3B1:uc002uue.3:exon15:c.A2098G:p.K700E 0.444562
+2247707 CBL nonsynonymous CBL:uc001pwe.3:exon8:c.C1192T:p.H398Y 0.094937
+2247707 CBL nonsynonymous CBL:uc001pwe.3:exon9:c.G1259T:p.R420L 0.161702
+2247707 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.441558
+2247707 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.G395T:p.R132L 0.272727
+NPM1:uc003mbi.3:exon11:c.859_860insTCTG:p.L2
+87fs
+WT1:uc001mto.2:exon8:c.1328_1332del:p.443_444
+del
+WT1:uc001mto.2:exon9:c.1400_1401insGTCAT:p.
+K467fs
+2247707 NPM1 frameshift insertion
+0.11666667
+2247707 WT1 frameshift deletion 2247707 WT1 frameshift insertion 2248361 ASXL1 stopgain ASXL1:uc021wbw.1:exon13:c.C2077T:p.R693X 0.229
+0.248
+0.06451613
+0.07407407
+2248361 BCORL1 frameshift insertion BCORL1:uc022cdu.1:exon3:c.809_810insAGTTAT
+GT:p.S270fs 2248361 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon19:c.A2281G:p.M761V 0.257
+2248361 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon19:c.T2194C:p.F732L 0.228
+0.13
+2248361 FLT3 nonframeshift insertion FLT3:uc010tdn.2:exon14:c.1818_1819insGGGGAG
+GGGTGAATATGATCTCAAATGGGAGTTTCC:p
+.P606delinsPGRGEYDLKWEFP 2248361 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.237
+2248361 RUNX1 frameshift deletion RUNX1:uc010gmv.3:exon9:c.977delA:p.D326fs 0.204
+RUNX1:uc010gmw.1:exon5:c.352_353insTTTAG:p
+.V118fs 0.228
+2248361 RUNX1 frameshift insertion 2260553 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.391403
+FLT3:uc010tdn.2:exon14:c.1780_1781insATGAAA
+GCCAGCTACAGATGGTACAGGTGACCGGCTC
+CTCAGATAATGAGTACTTCTACGTTGATT:p.F
+594delinsYESQLQMVQVTGSSDNEYFYVDF 0.38797814
+2260553 FLT3 nonframeshift insertion 2260553 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.367241
+NPM1:uc003mbi.3:exon11:c.859_860insTCTG:p.L2
+87fs 0.3627451
+2260553 NPM1 frameshift insertion 2260671 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.21
+0.09
+0.221
+2260671 NPM1 frameshift NPM1:uc003mbi.3:exon11:c.859_860insTCTG:p.L2
+87fs
+2260671 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284T:p.P95L2263055 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.061657
+2263055 NRAS nonsynonymous NRAS:uc009wgu.3:exon2:c.G35C:p.G12A 0.019116
+2263055 TP53 nonsynonymous TP53:uc010cni.2:exon5:c.C380T:p.S127F 0.983607
+2264225 DNMT3A splicing/nonsynonymous DNMT3A:uc002rgd.3:exon21:c.A2477G:p.K826R 0.87
+2264225 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.333333
+2264225 SETD2 splicing/nonsynonymous SETD2:uc003cqv.3:exon21:c.T7634A:p.M2545K 0.402878
+2264225 SETD2 nonsynonymous SETD2:uc003cqv.3:exon21:c.T7636A:p.S2546T 0.395683
+0.26701571
+2264225 SETD2 frameshift deletion SETD2:uc003cqv.3:exon3:c.574_575del:p.192_192d
+el 2264727 DNMT3A nonsynonymous DNMT3A:uc002rgd.4:exon22:c.A2512G:p.N838D 0.348941
+2264727 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.129
+2264727 MGA nonsynonymous MGA:uc010ucy.2:exon24:c.T8138G:p.L2713W 0.509989
+0.24528302
+2264727 NPM1 frameshift insertion NPM1:uc003mbi.3:exon11:c.859_860insTCTG:p.L2
+87fs 2264727 NRAS nonsynonymous NRAS:uc009wgu.3:exon2:c.G38A:p.G13D 0.310308
+2264727 RAD21 frameshift deletion RAD21:uc003yod.3:exon3:c.219_228del:p.Y73fs 0.51351351
+2264727 TP53 nonsynonymous TP53:uc010cni.2:exon7:c.A704G:p.N235S 0.480769
+ASXL1:uc021wbw.1:exon13:c.2057_2058del:p.K68
+6fs 0.18617021
+2280935 ASXL1 frameshift deletion 2280935 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.126415
+0.32380952
+2281469 ASXL1 frameshift deletion ASXL1:uc021wbw.1:exon13:c.1888_1910del:p.630
+_637del 2281469 BCOR stopgain BCOR:uc004dep.4:exon8:c.C3613T:p.Q1205X 0.021053
+2281469 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.C2644T:p.R882C 0.536913
+2281469 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.419355
+2281469 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon5:c.G497A:p.R166Q 0.46114
+2281469 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.492991
+2283265 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.401544
+0.57291667
+2292873 DNMT3A frameshift deletion DNMT3A:uc002rgd.3:exon17:c.1979_1988del:p.660
+_663del 2292873 DNMT3A stopgain DNMT3A:uc002rgd.3:exon8:c.G980A:p.W327X 0.448485
+2292873 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.446115
+0.33090909
+2292915 ASXL1 frameshift deletion ASXL1:uc021wbw.1:exon13:c.1773_1774del:p.Y59
+1fs 2292915 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.412884
+2292915 U2AF1 nonsynonymous U2AF1:uc002zcz.1:exon7:c.A251C:p.Q84P 0.459119
+2295595 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.381982
+2295595 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.328025
+2295595 PHF6 frameshift deletion PHF6:uc010nrr.3:exon7:c.676delG:p.G226fs 0.1509434
+2295595 SMC1A splicing/nonsynonymous SMC1A:uc011moe.2:exon16:c.G2354A:p.R785H 0.695896
+2295595 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.389655
+0.20714286
+2296723 ASXL1 frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 2296723 DNMT3A splicing DNMT3A:uc002rgd.3:exon13:c.1474+1G>T 0.068182
+2296723 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.408333
+2296723 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.452532
+frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 0.0990991
+2297625
+ASXL12297625 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.083045
+2297625 PHF6 frameshift deletion PHF6:uc010nrr.3:exon3:c.221delT:p.I74fs 0.17948718
+2297625 RUNX1 splicing RUNX1:uc010gmw.1:exon6:c.508+2T>C 0.289655
+2297625 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.300283
+0.06818182
+2297625 STAG2 frameshift insertion STAG2:uc004eud.3:exon28:c.2797_2798insA:p.E93
+3fs 2297625 TET2 nonsynonymous TET2:uc011cez.2:exon9:c.G4145C:p.G1382A 0.055901
+2297625 TET2 frameshift deletion TET2:uc021xqk.1:exon3:c.1222delC:p.P408fs 0.27319588
+2297707 BCOR stopgain BCOR:uc004deq.4:exon4:c.C1971G:p.Y657X 0.1
+0.294
+2297707 DNMT3A nonframeshift insertion DNMT3A:uc002rgd.3:exon17:c.1983_1984insGGG
+CATTCAGGTGGACCGCTACAT:p.I661delinsMG
+IQVDRYI 2297707 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.07
+2297707 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.066
+2297941 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.349451
+2297941 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.G395T:p.R132L 0.361111
+2307799 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon16:c.C1915T:p.L639F 0.05
+2307799 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.C2611G:p.P871A 0.34
+2307799 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.32
+BCORL1:uc022cdu.1:exon3:c.2406_2407insTAGG
+GGA:p.L802_S803delinsLX 0.20526316
+2337831 BCORL1 stopgain 2337831 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.447531
+0.27131783
+2337831 RUNX1 frameshift insertion RUNX1:uc010gmv.3:exon9:c.1252_1253insC:p.M4
+18fs 2337831 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284T:p.P95L 0.40201
+2361361 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.017354
+2361361 MED12 nonsynonymous MED12:uc011mpq.1:exon23:c.A3332G:p.N1111S 0.013447
+0.15384615
+2361405 ASXL1 frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 2361405 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.348135
+2361405 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.336879
+2361767 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.245161
+2361767 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.061
+2361767 MYB stopgain MYB:uc003qfq.3:exon10:c.C1553A:p.S518X 0.055556
+2366711 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.155702
+2366711 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.138298
+2366711 PHF6 frameshift insertion PHF6:uc011mvk.2:exon2:c.93dupA:p.L31fs 0.11267606
+2366711 RUNX1 frameshift insertion RUNX1:uc010gmw.1:exon6:c.548dupC:p.P183fs 0.17991632
+2366711 XPO1 nonsynonymous XPO1:uc010ypn.2:exon19:c.C2170T:p.L724F 0.04401
+0.14218009
+2370233 ASXL1 frameshift deletion ASXL1:uc021wbw.1:exon13:c.2032_2033del:p.R67
+8fs 2370233 CEBPA frameshift deletion CEBPA:uc002nun.3:exon1:c.273delC:p.A91fs 0.06410256
+2370233 DNMT3A nonsynonymous DNMT3A:uc002rgd.4:exon14:c.G1628C:p.G543A 0.12967
+2370233 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.135011
+0.11827957
+2370233 NPM1 frameshift insertion NPM1:uc003mbi.3:exon11:c.859_860insTCTG:p.L2
+87fs 2370233 SETD2 stopgain SETD2:uc003cqv.3:exon3:c.C3997T:p.Q1333X 0.059805
+2370759 BCOR stopgain BCOR:uc004dep.4:exon10:c.G4288T:p.E1430X 0.2352942370759 CBL nonframeshift deletion CBL:uc001pwe.3:exon8:c.1096_1227del:p.366_409
+del 0.06862745
+2370759 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.281538
+2370759 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.215926
+0.22222222
+2370759 RUNX1 frameshift deletion RUNX1:uc010gmv.3:exon9:c.1096_1103del:p.366_
+368del 2370759 RUNX1 stopgain RUNX1:uc010gmv.3:exon9:c.C1209A:p.Y403X 0.021786
+2370759 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.259155
+2370759 TET2 frameshift deletion TET2:uc021xqk.1:exon3:c.2936delG:p.R979fs 0.06325301
+2370759 TET2 stopgain TET2:uc021xqk.1:exon3:c.G655T:p.E219X 0.325658
+2382431 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.367857
+2382431 SMC1A stopgain SMC1A:uc011moe.2:exon18:c.G2497T:p.E833X 0.776515
+0.39189189
+2383235 DNMT3A frameshift deletion DNMT3A:uc002rgd.3:exon21:c.2426_2427del:p.809
+_809del 2383235 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.19244
+2394529 ASXL1 stopgain ASXL1:uc021wbw.1:exon13:c.C2309G:p.S770X 0.427918
+2394529 DNMT3A frameshift deletion DNMT3A:uc002rgd.3:exon11:c.1372delC:p.R458fs 0.19125683
+0.26829268
+2394529 DNMT3A frameshift deletion DNMT3A:uc002rgd.3:exon19:c.2194_2207del:p.732
+_736del 2394529 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.304348
+2394529 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.194203
+2394529 U2AF1 nonsynonymous U2AF1:uc002zcz.1:exon7:c.A251G:p.Q84R 0.239286
+2410163 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.372685
+2412147 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon18:c.G2096A:p.G699D 0.554
+2412147 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.322
+0.07303371
+2419959 ASXL1 frameshift deletion ASXL1:uc021wbw.1:exon13:c.3633_3636del:p.D12
+11fs 2419959 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G515A:p.R172K 0.050725
+2426545 ASXL1 frameshift deletion ASXL1:uc021wbw.1:exon13:c.2818delT:p.L940fs 0.26133333
+2426545 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.096026
+NF1:uc002hgh.3:exon5:c.504_505insCCCATCAC:p
+.S168fs
+RUNX1:uc010gmv.3:exon9:c.1028_1029insTGATC
+:p.S343fs
+2426545 NF1 frameshift insertion
+0.1589404
+2426545 RUNX1 frameshift insertion 2426545 RUNX1 frameshift insertion RUNX1:uc010gmw.1:exon6:c.540dupC:p.T181fs 0.2688172
+0.17021277
+0.39772727
+2426545 SRSF2 nonframeshift insertion SRSF2:uc010wtg.2:exon1:c.283_284insGCG:p.P95d
+elinsRA 2430935 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.221154
+2430935 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.187234
+ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs
+DNMT3A:uc002rgd.3:exon19:c.2303_2304insCGTT
+AGTGACAAGAGGG:p.D768fs
+2432389 ASXL1 frameshift insertion
+0.09240924
+2432389 DNMT3A frameshift insertion 2432389 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.223192
+2432389 PHF6 stopgain PHF6:uc010nrr.3:exon8:c.G811T:p.E271X 0.069277
+2432389 U2AF1 nonsynonymous U2AF1:uc002zcz.1:exon7:c.A251C:p.Q84P 0.339192
+0.27699531
+0.24669604
+2450523 ASXL1 frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 2450523 CEBPA frameshift insertion CEBPA:uc002nun.3:exon1:c.68dupC:p.P23fs 0.04166667
+2450523 CEBPA frameshift insertion CEBPA:uc002nun.3:exon1:c.81_82insCC:p.S28fs 0.07692308
+2450523 CEBPA stopgain CEBPA:uc002nun.3:exon1:c.C324G:p.Y108X 0.2941182450523 CEBPA nonsynonymous CEBPA:uc002nun.3:exon1:c.C970G:p.L324V 0.008347
+2450523 GATA2 frameshift insertion GATA2:uc003ekm.3:exon3:c.72dupA:p.H25fs 0.15
+2450523 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.184676
+2450523 RUNX1 splicing RUNX1:uc010gmw.1:exon8:c.806-2A>G 0.233716
+2450523 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.440741
+2450523 TET2 frameshift deletion TET2:uc021xqk.1:exon3:c.1895delA:p.Q632fs 0.319202
+0.22807018
+2463247 ASXL1 frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 2463247 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.26087
+2463247 KRAS nonsynonymous KRAS:uc001rgq.1:exon4:c.C437T:p.A146V 0.021858
+2463247 NRAS nonsynonymous NRAS:uc009wgu.3:exon2:c.G34C:p.G12R 0.016194
+2463247 NRAS nonsynonymous NRAS:uc009wgu.3:exon3:c.T190G:p.Y64D 0.104972
+2463247 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G602A:p.R201Q 0.475771
+2463247 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.462963
+2480485 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.473214
+2480485 JAK2 nonsynonymous JAK2:uc003ziw.3:exon14:c.G1849T:p.V617F 0.997859
+2480485 RUNX1 frameshift insertion RUNX1:uc010gmv.3:exon9:c.1023dupC:p.I342fs 0.16071429
+2480485 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G592A:p.D198N 0.538018
+2480485 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284T:p.P95L 0.502058
+0.0621118
+2498789 ASXL1 frameshift insertion ASXL1:uc021wbw.1:exon13:c.1926_1927insG:p.G6
+42fs 2498789 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.075251
+2498789 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284A:p.P95H 0.104803
+2502699 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.488372
+2502699 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284G:p.P95R 0.400593
+2502699 TET2 stopgain TET2:uc021xqk.1:exon3:c.C2728T:p.Q910X 0.006897
+2512641 DNMT3A frameshift deletion DNMT3A:uc002rgd.3:exon6:c.503delG:p.G168fs 0.28742515
+2512641 GATA2 frameshift deletion GATA2:uc003ekm.3:exon4:c.625delG:p.D209fs 0.20164609
+2512641 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.G395A:p.R132H 0.24826
+2583919 DNMT3A splicing DNMT3A:uc002rgd.3:exon11:c.1429+1G>A 0.284738
+2583919 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.301923
+2583919 MGA stopgain MGA:uc010ucz.2:exon9:c.C3157T:p.R1053X 0.300842
+0.25396825
+2583919 NPM1 frameshift insertion NPM1:uc003mbi.3:exon11:c.859_860insTCTG:p.L2
+87fs 2616045 BCOR frameshift insertion BCOR:uc004deq.4:exon4:c.1218dupG:p.P407fs 0.21969697
+2616045 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.422785
+2616045 IDH2 nonsynonymous IDH2:uc002box.3:exon4:c.G419A:p.R140Q 0.412556
+0.92307692
+2616045 RUNX1 nonframeshift deletion RUNX1:uc010gmw.1:exon4:c.341_343del:p.114_11
+5del 2616045 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284T:p.P95L 0.485149
+2620771 BCOR stopgain BCOR:uc004dep.4:exon8:c.G3707A:p.W1236X 0.903509
+2620771 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon19:c.C2245G:p.R749G 0.426901
+2620771 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.T2726C:p.F909S 0.445596
+2620771 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.2857142620771 NF1 splicing
+NF1:uc002hgh.3:exon13:c.1527+3A>T 0.29906542
+2620771 SRSF2 nonsynonymous SRSF2:uc010wtg.2:exon1:c.C284T:p.P95L 0.40583
+1
+2620771 STAG2 frameshift insertion STAG2:uc004eud.3:exon22:c.2118_2119insGATTT
+ATTTGCTTGTAATTA:p.W706fs 4128869 BCOR stopgain BCOR:uc004dep.4:exon9:c.C3814T:p.Q1272X 0.84375
+4128869 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.413333
+4128869 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.408367
+4128869 RUNX1 frameshift deletion RUNX1:uc010gmw.1:exon7:c.648delC:p.P216fs 0.28776978
+0.32022472
+4128869 SRSF2 nonframeshift insertion SRSF2:uc010wtg.2:exon1:c.283_284insGCC:p.P95d
+elinsRP 4235533 FLT3 nonsynonymous FLT3:uc010tdn.2:exon11:c.C1352T:p.S451F 0.446084
+4235533 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.G395A:p.R132H 0.459406
+4235533 STAG2 frameshift deletion STAG2:uc004eud.3:exon4:c.90delC:p.I30fs 0.57241379
+4235533 TET2 nonsynonymous TET2:uc011cez.2:exon7:c.G3877A:p.A1293T 0.433007
+4235533 WT1 frameshift deletion WT1:uc001mtq.2:exon2:c.720delC:p.P240fs 0.31679389
+4259035 BCOR splicing BCOR:uc004deq.4:exon10:c.4326+2T>G 0.124306
+4259035 HIST1H2BL nonsynonymous HIST1H2BL:uc003njl.3:exon1:c.C255G:p.N85K 0.026154
+4259035 IDH1 nonsynonymous IDH1:uc002vcu.3:exon4:c.C394T:p.R132C 0.241379
+4259035 WT1 frameshift insertion WT1:uc001mto.2:exon10:c.1527dupA:p.L510fs 0.20819113

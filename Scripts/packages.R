@@ -35,5 +35,7 @@ library(dorothea)
 library(viper)
 library(org.Hs.eg.db)
 library(tidyverse)
-
+library(enrichplot)
 #look at gene annotation cpgs
+library(pathview)
+

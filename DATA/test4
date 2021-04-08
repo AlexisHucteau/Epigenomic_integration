@@ -1,0 +1,26 @@
+974025 RUNX1 stopgain RUNX1:uc002yur.1:exon2:c.318_319ins5773:p.P10
+1873085 RUNX1 splicing RUNX1:uc010gmw.1:exon6:c.508+2T>A 0.375
+2150901 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon5:c.G497A:p.R166Q 0.282534
+nonframeshift insertion RUNX1:uc010gmw.1:exon7:c.677_678insGAG:p.S2
+RUNX12150901 SRSF2 nonsynonymous
+2151503 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon4:c.C337G:p.P113A 0.250804
+2151503 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G592A:p.D198N 0.230769
+2219711 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G592T:p.D198Y 0.558304
+2246709 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon5:c.G485A:p.R162K 0.894403
+2248361 RUNX1 frameshift deletion RUNX1:uc010gmv.3:exon9:c.977delA:p.D326fs 0.204
+RUNX1:uc010gmw.1:exon5:c.352_353insTTTAG:p
+2248361 RUNX1 frameshift insertion 2260553 DNMT3A nonsynonymous DNMT3A:uc002rgd.3:exon23:c.G2645A:p.R882H 0.391403
+2281469 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon5:c.G497A:p.R166Q 0.46114
+2297625 RUNX1 splicing RUNX1:uc010gmw.1:exon6:c.508+2T>C 0.289655
+2337831 RUNX1 frameshift insertion RUNX1:uc010gmv.3:exon9:c.1252_1253insC:p.M4
+2366711 RUNX1 frameshift insertion RUNX1:uc010gmw.1:exon6:c.548dupC:p.P183fs 0.17991632
+2370759 RUNX1 frameshift deletion RUNX1:uc010gmv.3:exon9:c.1096_1103del:p.366_
+368del 2370759 RUNX1 stopgain RUNX1:uc010gmv.3:exon9:c.C1209A:p.Y403X 0.021786
+RUNX1:uc010gmv.3:exon9:c.1028_1029insTGATC
+2426545 RUNX1 frameshift insertion 2426545 RUNX1 frameshift insertion RUNX1:uc010gmw.1:exon6:c.540dupC:p.T181fs 0.2688172
+2450523 RUNX1 splicing RUNX1:uc010gmw.1:exon8:c.806-2A>G 0.233716
+2463247 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G602A:p.R201Q 0.475771
+2480485 RUNX1 frameshift insertion RUNX1:uc010gmv.3:exon9:c.1023dupC:p.I342fs 0.16071429
+2480485 RUNX1 nonsynonymous RUNX1:uc010gmw.1:exon6:c.G592A:p.D198N 0.538018
+2616045 RUNX1 nonframeshift deletion RUNX1:uc010gmw.1:exon4:c.341_343del:p.114_11
+4128869 RUNX1 frameshift deletion RUNX1:uc010gmw.1:exon7:c.648delC:p.P216fs 0.28776978

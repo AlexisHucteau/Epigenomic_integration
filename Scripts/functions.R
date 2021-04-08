@@ -18,7 +18,7 @@ add_genes_annotations <- function(vector_of_genes, attribute_known) {
 
 
 
-Differential_analysis <- function(Focused_variable, DATA, type_of_data = ""){
+Differential_analysis <- function(Focused_variable, DATA){
   design.pairs <- function(levels) {
     n <- length(levels)
     design <- matrix(0,n,choose(n,2))
@@ -35,10 +35,6 @@ Differential_analysis <- function(Focused_variable, DATA, type_of_data = ""){
     design
   }
   design <- model.matrix(~0 + Focused_variable)
-  if (type_of_data == "gene_expression"){
-    print("norm")
-    DATA <- voom(DATA, design, plot = FALSE)
-  }
   contr.matrix <- design.pairs(levels(factor(Focused_variable)))
   colnames(design) <- rownames(contr.matrix)   
   Fit <- lmFit(DATA, design) %>%
@@ -1348,3 +1344,62 @@ tf_activities_function<- function(treatment,control,path){
   return(ht) 
 }
 
+Gene_set_analysis <- function(Analysis, organism){
+  gene_list <- Analysis$logFC
+  names(gene_list) <- Analysis$ID
+  gene_list<-na.omit(gene_list)
+  
+  gene_list <- sort(gene_list, decreasing = T)
+
+  gse <- gseGO(geneList=gene_list, 
+               ont ="ALL", 
+               keyType = "SYMBOL", 
+               nPerm = 10000, 
+               minGSSize = 3, 
+               maxGSSize = 800, 
+               verbose = TRUE, 
+               OrgDb = organism, 
+               pAdjustMethod = "none")
+  return(gse)
+}
+
+
+
+
+KEGG_pathway_analysis <- function(Analysis, organism){
+  
+  gene_list <- Analysis$logFC
+  names(gene_list) <- Analysis$ID
+  
+  ids<-bitr(names(gene_list), fromType = "SYMBOL", toType = "ENTREZID", OrgDb=organism)
+  # remove duplicate IDS (here I use "ENSEMBL", but it should be whatever was selected as keyType)
+  dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
+  
+  # Create a new dataframe df2 which has only the genes which were successfully mapped using the bitr function above
+  df2 = Analysis[Analysis$ID %in% dedup_ids$SYMBOL,]
+  
+  # Create a new column in df2 with the corresponding ENTREZ IDs
+  df2 = merge(df2, dedup_ids, by.x = "ID", by.y = "SYMBOL")
+  
+  # Create a vector of the gene unuiverse
+  kegg_gene_list <- df2$logFC
+  
+  # Name vector with ENTREZ ids
+  names(kegg_gene_list) <- df2$ENTREZID
+  
+  # omit any NA values 
+  kegg_gene_list<-na.omit(kegg_gene_list)
+  
+  # sort the list in decreasing order (required for clusterProfiler)
+  kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
+  
+  kegg_organism <- "hsa"
+  kk2 <- gseKEGG(geneList     = kegg_gene_list,
+                 organism     = kegg_organism,
+                 nPerm        = 10000,
+                 minGSSize    = 3,
+                 maxGSSize    = 800,
+                 pAdjustMethod = "none",
+                 keyType       = "ncbi-geneid")
+  return(kk2)
+}

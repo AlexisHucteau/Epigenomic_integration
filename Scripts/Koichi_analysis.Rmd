@@ -233,6 +233,40 @@ Results[["After_treatment_enhancer_analysis"]][["Genes_list_of_Genes_with_hyper_
 
 
 ```{r}
+RNAseq <- RNAseq_Wang_Feng %>% voom() %>% .$E %>%as.data.frame()
+
+RNAseq$Gene <- rownames(RNAseq) %>% str_split(., "[|]") %>% lapply(., function(x){
+  x[1]
+}) %>%
+  unlist(.)
+
+RNAseq <- RNAseq %>%
+  split(., .$Gene) %>%
+  lapply(., function(x){
+    l <- length(x[1,]) - 1
+    cnames <- colnames(x)[c(1:l)]
+    df <- x[,c(1:l)] %>%
+      as.matrix(.) %>%
+      colSums2(.) %>% 
+      data.frame(.) %>%
+      t(.) %>%
+      data.frame(.)
+    colnames(df) <- cnames
+    df
+  }) %>%
+  rbindlist(.) %>% 
+  data.frame(.)
+
+gene_rownames <- rownames(RNAseq_Wang_Feng) %>% str_split(., "[|]") %>% lapply(., function(x){
+  x[1]
+}) %>%
+  unlist(.) %>% 
+  unique(.)
+rownames(RNAseq) <- gene_rownames
+
+colnames(RNAseq) <- substr(colnames(RNAseq), 2, 12)
+
+
 A <- sapply(colnames(RNAseq_Wang_Feng), function(x){
   tmp <- dplyr::filter(Phenotypes[["Koichi_cohort"]], Baseline_phenotype == "Non_Responder")
   x %in% tmp$Baseline_RNAseq_data
@@ -290,7 +324,6 @@ RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]]$logFC <- ifelse(
 Genes_diff_expressed <- dplyr::filter(RNAseq_Wang_Feng_Baseline_analysis[["Non_responder-Responder"]], abs(logFC) > 0.75 & P.Value < 0.05) %>% 
   .$ID
 ```
-
 
 ### Clustering 
 
@@ -1494,5 +1527,402 @@ colnames(RNA_selected_genes) <- substring(colnames(RNA_selected_genes), 2,11)
 png("../Results/Clustering_Baseline_based_on_gene_metabo_DM_enhancer.png", width = 360*(16/9), height = 360)
 Make_heatmap(RNA_selected_genes, Phenotype = tmp, "pearson", "Non_responder & Responder based on Genes metabo DM enhancer", ann_color_RNA)
 dev.off()
+```
+
+
+# RUNX1 analysis
+```{r}
+RUNX1_profile <- read.table("~/GitHub/Epigenomic_integration/DATA/RUNX1_profile.txt", quote="\"", comment.char="")
+RUNX1_profile$Sample_name <- paste0(RUNX1_profile$V1, "_BL")
+RUNX1_profile$Sample_name2 <- paste0(RUNX1_profile$V1, "_REL")
+
+Phenotype_Wang_Feng_RNAseq$RUNX1 <- ifelse((Phenotype_Wang_Feng_RNAseq$Sample %in% RUNX1_profile$Sample_name | Phenotype_Wang_Feng_RNAseq$Sample %in% RUNX1_profile$Sample_name2), "RUNX1_mut", "RUNX1_wt")
+Phenotype_Wang_Feng_RNAseq_merged <- merge(Phenotype_Wang_Feng_RNAseq, tmp, by.x = "Sample", by.y = 0, all = T)
+
+
+annotation_RUNX1 <- list(
+  Response = c(Responder = "blue", Non_responder = "red"),
+  RUNX1_mutation = c(RUNX1_mut = "red", RUNX1_wt = "blue"))
+
+annotation_for_heatmap_RUNX1 <- data.frame(RUNX1_mutation = Phenotype_Wang_Feng_RNAseq$RUNX1, Response = Phenotype_Wang_Feng_RNAseq$Phenotype.y)
+rownames(annotation_for_heatmap_RUNX1) <- Phenotype_Wang_Feng_RNAseq$Sample
+
+annotation_for_heatmap_RUNX1 <- annotation_for_heatmap_RUNX1[-which(is.na(annotation_for_heatmap_RUNX1$Response)),]
+
+RUNX1_activity <- dplyr::select(tf_activities, c("RUNX1", "CEBPA"))
+
+png("../Results/RUNX1_activity_mutation.png", width = 360*(16/9), height = 360)
+pheatmap(as.matrix(RUNX1_activity),
+  main="TF activities",
+  show_rownames = FALSE,
+  clustering_distance_rows="euclidean",
+  scale = "column", 
+  annotation_row = annotation_for_heatmap_RUNX1,
+  annotation_colors = annotation_RUNX1
+  )
+dev.off()
+pheatmap(as.matrix(RUNX1_activity),
+  main="TF activities",
+  show_rownames = FALSE,
+  clustering_distance_rows="euclidean",
+  scale = "column", 
+  annotation_row = annotation_for_heatmap_RUNX1,
+  annotation_colors = annotation_RUNX1
+  )
+RUNX1_exp <- voom(RNAseq_Baselin_rownames)$E %>% .[c("RUNX1", "CEBPA"),] %>% t()
+RUNX1_exp_activity <- merge(RUNX1_exp, RUNX1_activity, by.x = 0, by.y = 0) 
+rownames(RUNX1_exp_activity) <- RUNX1_exp_activity$Row.names
+RUNX1_exp_activity <- RUNX1_exp_activity[,-1]
+colnames(RUNX1_exp_activity) <- c("RUNX1 exp", "CEBPa exp", "RUNX1 activity", "CEBPA activity")
+
+png("../Results/RUNX1_activity_expression_mutation.png", width = 360*(16/9), height = 360)
+RUNX1_exp_activity %>% as.matrix() %>% 
+  pheatmap(main="RUNX1 CEBPA expression & activity",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_RUNX1,
+    annotation_colors = annotation_RUNX1)
+dev.off()
+```
+
+```{r}
+fisher_table_RUNX1 <- data.frame(RUNX1_mutation = c(5, 2), Response = c(11, 10))
+fisher.test(fisher_table_RUNX1)
+```
+
+```{r}
+RUNX1_high_CEBPA_down <- RUNX1_activity %>% dplyr::filter(RUNX1 > 0 & CEBPA < 0) %>% rownames()
+RUNX1_down_CEBPA_up <- RUNX1_activity %>% dplyr::filter(RUNX1 < 0 & CEBPA > 0) %>% rownames()
+```
+
+```{r}
+RUNX1_CEBPA_focus <- voom(RNAseq_Baselin_rownames)$E %>%
+  .[,which(colnames(.) %in% c(RUNX1_high_CEBPA_down, RUNX1_down_CEBPA_up))]
+
+Phenotype_RUNX1_CEBPA <- ifelse(colnames(RUNX1_CEBPA_focus) %in% RUNX1_high_CEBPA_down, "RUNX1_up_CEBPA_down", "RUNX1_down_CEBPA_up")
+
+RUNX1_CEBPA_Analysis <- Differential_analysis(Phenotype_RUNX1_CEBPA, RUNX1_CEBPA_focus)
+```
+
+```{r}
+volcanoplot_gene_expression(RUNX1_CEBPA_Analysis[["RUNX1_down_CEBPA_up-RUNX1_up_CEBPA_down"]], "Differential gene expression based on RUNX1/CEBPA activity")
+```
+
+# Pathway VDR enrichi quand CEBPa actif vs CEBPa inactif chez KOICHI
+
+```{r}
+Baseline_samples_CEBPa_actif <- RUNX1_activity %>% dplyr::filter(CEBPA > 0) %>% rownames()
+Baseline_samples_CEBPa_inactif <- RUNX1_activity %>% dplyr::filter(CEBPA < 0) %>% rownames()
+```
+
+```{r}
+Phenotype_CEBPA <- ifelse(colnames(RNAseq_Baselin_rownames) %in% Baseline_samples_CEBPa_actif, "ACTIF", ifelse(colnames(RNAseq_Baselin_rownames) %in% Baseline_samples_CEBPa_inactif, "INACTIF", "NA"))
+
+CEBPa_activity_impact_on_GE <- Differential_analysis(Phenotype_CEBPA, voom(RNAseq_Baselin_rownames)$E)
+```
+```{r}
+KEGG_analysis_CEBPA_activity <- KEGG_pathway_analysis(CEBPa_activity_impact_on_GE[["ACTIF-INACTIF"]], organism = org.Hs.eg.db)
+```
+
+```{r}
+Gene_set_CEBPA_activity <- Gene_set_analysis(CEBPa_activity_impact_on_GE[["ACTIF-INACTIF"]], organism = org.Hs.eg.db)
+```
+
+# NR vs R without RUNX1m
+
+```{r}
+RNAseq_no_RUNX1m <- RNAseq_Baselin_rownames %>% voom(.) %>% .$E %>% .[,-which(colnames(.) %in% RUNX1_profile$Sample_name)]
+
+NR_Samples <- Phenotype_Wang_Feng_RNAseq %>% dplyr::filter(Phenotype == "Baseline" & Non_Responder == TRUE) %>% .$Sample
+R_Samples <-  Phenotype_Wang_Feng_RNAseq %>% dplyr::filter(Phenotype == "Baseline" & Responder == TRUE) %>% .$Sample
+
+Phenotype_NR_R_no_RUNX1 <- ifelse(colnames(RNAseq_no_RUNX1m) %in% NR_Samples, "Non_Responder", ifelse(colnames(RNAseq_no_RUNX1m) %in% R_Samples, "Responder", "NA"))
+
+RNAseq_no_RUNX1m_analysis <- Differential_analysis(Phenotype_NR_R_no_RUNX1, RNAseq_no_RUNX1m)
+```
+
+```{r}
+KEGG_analysis_NR_R_no_RUNX1 <- KEGG_pathway_analysis(RNAseq_no_RUNX1m_analysis[["Non_Responder-Responder"]], organism = org.Hs.eg.db)
+```
+
+```{r}
+Gene_set_NR_R_no_RUNX1 <- Gene_set_analysis(RNAseq_no_RUNX1m_analysis[["Non_Responder-Responder"]], organism = org.Hs.eg.db)
+```
+
+```{r}
+gseaplot(Gene_set_NR_R_no_RUNX1, by = "all", title = Gene_set_NR_R_no_RUNX1$Description[723], geneSetID = 723)
+```
+
+
+```{r}
+tf_activities_No_RUNX1m <- run_viper(RNAseq, regulons, 
+                           options =  list(method = "scale", minsize = 4, eset.filter = FALSE, cores = 1, verbose = FALSE))
+tf_activities_No_RUNX1m=t(tf_activities_No_RUNX1m) %>% as.data.frame()
+```
+
+
+```{r}
+png("../Results/RUNX1_CEBPA_activity_no_RUNX1m.png", width = 360*(16/9), height = 360)
+tf_activities_No_RUNX1m %>% dplyr::select(c("RUNX1", "CEBPA")) %>%
+  as.matrix() %>% 
+  pheatmap(main="TF activities no RUNX1m",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_RUNX1,
+    annotation_colors = annotation_RUNX1)
+dev.off()
+
+png("../Results/TF_activity_no_RUNX1m.png", width = 360*(16/9), height = 360)
+tf_activities_No_RUNX1m %>% 
+  as.matrix() %>% 
+  pheatmap(main="TF activities no RUNX1m",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_RUNX1,
+    annotation_colors = annotation_RUNX1)
+dev.off()
+
+diff_TF <- tf_Ttest_activities_No_RUNX1m %>% as.data.frame() %>% dplyr::filter(p.value_activities < 0.1) %>% rownames(.)
+
+png("../Results/TF_activity_diff_no_RUNX1m.png", width = 360*(16/9), height = 360)
+tf_activities_No_RUNX1m %>% dplyr::select(diff_TF) %>%
+  as.matrix() %>% 
+  pheatmap(main="TF activities no RUNX1m",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_RUNX1,
+    annotation_colors = annotation_RUNX1)
+dev.off()
+```
+
+```{r}
+Sample_Baseline_NR <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, Phenotype == "Baseline" & RUNX1 == "RUNX1_wt" & Non_Responder == "TRUE") %>% .$Sample
+Sample_Baseline_R_RUNX1wt <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, Phenotype == "Baseline" & RUNX1 == "RUNX1_wt" & Responder == "TRUE") %>% .$Sample
+
+A <- rownames(tf_activities_No_RUNX1m) %in% Sample_Baseline_NR
+
+B <- rownames(tf_activities_No_RUNX1m) %in% Sample_Baseline_R_RUNX1wt
+
+tf_Ttest_activities_No_RUNX1m <- tf_activities_No_RUNX1m %>%
+  sapply(., function(x){
+    test_tmp <- t.test(x[A], x[B])
+    c("p.value_activities" = test_tmp$p.value, 
+               "Non_reponder_mean" = test_tmp$estimate[1], 
+               "Responder" = test_tmp$estimate[2])
+  }) %>%
+  t()
+```
+
+```{r}
+Genes_values_No_RUNX1m <- merge(tf_Ttest_activities_No_RUNX1m, RNAseq_no_RUNX1m_analysis[["Non_Responder-Responder"]], by.x = 0, by.y = "ID", all = T)
+
+Genes_values_No_RUNX1m <- dplyr::mutate_at(Genes_values_No_RUNX1m, c(2), funs(replace(., is.na(.), 1)))
+Genes_values_No_RUNX1m <- dplyr::mutate_at(Genes_values_No_RUNX1m, c(3, 4), funs(replace(., is.na(.), 0)))
+
+Genes_values_No_RUNX1m_Responder_Relapse <- merge(Genes_values_No_RUNX1m, tf_Ttest_activities_Responser, by.x = "Row.names", by.y = 0, all = T)
+
+Genes_values_No_RUNX1m_Responder_Relapse <- dplyr::mutate_at(Genes_values_No_RUNX1m_Responder_Relapse, c(11), funs(replace(., is.na(.), 1)))
+Genes_values_No_RUNX1m_Responder_Relapse <- dplyr::mutate_at(Genes_values_No_RUNX1m_Responder_Relapse, c(12, 13), funs(replace(., is.na(.), 0)))
+
+write.csv(Genes_values_No_RUNX1m_Responder_Relapse, "../Results/Genes_values_No_RUNX1m.csv", row.names = F)
+
+
+```
+
+# AT RELAPSE 
+
+```{r}
+Sample_NR_no_RUNX1 <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, Phenotype == "Baseline" & RUNX1 == "RUNX1_wt" & Non_Responder == "TRUE") %>% .$Sample
+Sample_relapse_no_RUNX1 <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, Phenotype == "Relapse" & RUNX1 == "RUNX1_wt") %>% .$Sample
+
+RNAseq_Relapse <- RNAseq_Wang_Feng %>% voom() %>% .$E %>%as.data.frame()
+
+RNAseq_Relapse$Gene <- rownames(RNAseq_Relapse) %>% str_split(., "[|]") %>% lapply(., function(x){
+  x[1]
+}) %>%
+  unlist(.)
+
+RNAseq_Relapse <- RNAseq_Relapse %>%
+  split(., .$Gene) %>%
+  lapply(., function(x){
+    l <- length(x[1,]) - 1
+    cnames <- colnames(x)[c(1:l)]
+    df <- x[,c(1:l)] %>%
+      as.matrix(.) %>%
+      colSums2(.) %>% 
+      data.frame(.) %>%
+      t(.) %>%
+      data.frame(.)
+    colnames(df) <- cnames
+    df
+  }) %>%
+  rbindlist(.) %>% 
+  data.frame(.)
+
+gene_rownames <- rownames(RNAseq_Wang_Feng) %>% str_split(., "[|]") %>% lapply(., function(x){
+  x[1]
+}) %>%
+  unlist(.) %>% 
+  unique(.)
+rownames(RNAseq_Relapse) <- gene_rownames
+
+colnames(RNAseq_Relapse) <- substr(colnames(RNAseq_Relapse), 2, 12)
+
+Phenotype_NR_R_Relapse <- ifelse(colnames(RNAseq_Relapse) %in% Sample_NR_no_RUNX1, "Non_Responder", ifelse(colnames(RNAseq_Relapse) %in% Sample_relapse_R_no_RUNX1, "Responder", "NA"))
+
+
+RNAseq_Relapse_analysis <- Differential_analysis(Phenotype_NR_R_Relapse, RNAseq_Relapse)
+```
+
+```{r}
+tf_activities_Relapse <- run_viper(RNAseq_Relapse, regulons, 
+                           options =  list(method = "scale", minsize = 4, eset.filter = FALSE, cores = 1, verbose = FALSE))
+tf_activities_Relapse=t(tf_activities_Relapse) %>% as.data.frame()
+```
+
+```{r}
+A <- rownames(tf_activities_Relapse) %in% Sample_NR_no_RUNX1
+
+B <- rownames(tf_activities_Relapse) %in% Sample_Baseline_R_RUNX1wt
+
+tf_Ttest_activities_Relapse <- tf_activities_Relapse %>%
+  sapply(., function(x){
+    test_tmp <- t.test(x[A], x[B])
+    c("p.value_activities" = test_tmp$p.value, 
+               "Non_reponder" = test_tmp$estimate[1], 
+               "Relapse" = test_tmp$estimate[2])
+  }) %>%
+  t()
+```
+
+
+```{r}
+A <- rownames(tf_activities_Relapse) %in% Sample_relapse_no_RUNX1
+
+B <- rownames(tf_activities_Relapse) %in% Sample_Baseline_R_RUNX1wt
+
+tf_Ttest_activities_Responser <- tf_activities_No_RUNX1m %>%
+  sapply(., function(x){
+    test_tmp <- t.test(x[A], x[B])
+    c("p.value_activities" = test_tmp$p.value, 
+               "Responser at relapse" = test_tmp$estimate[1], 
+               "Responder at Baseline" = test_tmp$estimate[2])
+  }) %>%
+  t()
+```
+
+```{r}
+annotation_color_Relapse <- list(
+  Response = c(Responder = "blue", Non_Responder = "red", Relapse_or_No_data = "grey"),
+  RUNX1_mutation = c(RUNX1_mut = "red", RUNX1_wt = "blue"),
+  Relapse = c(Baseline = "blue", Relapse = "red"))
+
+Response <- ifelse(Phenotype_Wang_Feng_RNAseq$Responder, "Responder", ifelse(Phenotype_Wang_Feng_RNAseq$Non_Responder, "Non_Responder", "Relapse_or_No_data"))
+
+annotation_for_heatmap_Relapse <- data.frame(Sample = Phenotype_Wang_Feng_RNAseq$Sample,
+                                             Response = Response,
+                                             Relapse = Phenotype_Wang_Feng_RNAseq$Phenotype,
+                                             RUNX1_mutation = Phenotype_Wang_Feng_RNAseq$RUNX1)
+rownames(annotation_for_heatmap_Relapse) <- annotation_for_heatmap_Relapse$Sample
+annotation_for_heatmap_Relapse <- annotation_for_heatmap_Relapse[,-1]
+annotation_for_heatmap_Relapse$Response <- ifelse(is.na(annotation_for_heatmap_Relapse$Response), "Relapse_or_No_data", annotation_for_heatmap_Relapse$Response)
+
+png("../Results/RUNX1_CEBPA_activity_Relapse.png", width = 360*(16/9), height = 360)
+tf_activities_Relapse %>% as.data.frame() %>% dplyr::select(c("RUNX1", "CEBPA")) %>%
+  as.matrix() %>% 
+  pheatmap(main="TF activities Relapse",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_Relapse,
+    annotation_colors = annotation_color_Relapse)
+dev.off()
+```
+
+```{r}
+Sample_no_RUNX1 <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, RUNX1 == "RUNX1_wt") %>% .$Sample
+
+png("../Results/RUNX1_CEBPA_activity_Relapse_no_RUNX1.png", width = 360*(16/9), height = 360)
+tf_activities_Relapse %>% as.data.frame() %>% dplyr::select(c("RUNX1", "CEBPA")) %>% .[Sample_no_RUNX1,] %>%
+  as.matrix() %>% 
+  pheatmap(main="TF activities Relapse",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_Relapse,
+    annotation_colors = annotation_color_Relapse)
+dev.off()
+```
+
+```{r}
+png("../Results/TF_activity_Relapse.png", width = 360*(16/9), height = 360)
+tf_activities_Relapse %>% as.data.frame() %>% 
+  as.matrix() %>% 
+  pheatmap(main="TF activities Relapse",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_Relapse,
+    annotation_colors = annotation_color_Relapse)
+dev.off()
+```
+
+```{r}
+png("../Results/TF_activity_Relapse_No_RUNX1.png", width = 360*(16/9), height = 360)
+tf_activities_Relapse %>% as.data.frame() %>% .[Sample_no_RUNX1,] %>%
+  as.matrix() %>% 
+  pheatmap(main="TF activities Relapse",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_Relapse,
+    annotation_colors = annotation_color_Relapse)
+dev.off()
+```
+
+```{r}
+png("../Results/RUNX1_CEBPA_activity_Relapse_R_No_RUNX1.png", width = 360*(16/9), height = 360)
+tf_activities_Relapse %>% as.data.frame() %>% .[unique(c(Sample_relapse_no_RUNX1, Sample_Baseline_R)),] %>% dplyr::select(c("RUNX1", "CEBPA")) %>%
+  as.matrix() %>% 
+  pheatmap(main="TF activities Relapse",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_Relapse,
+    annotation_colors = annotation_color_Relapse)
+dev.off()
+```
+
+```{r}
+png("../Results/RUNX1_CEBPA_activity_NR_No_RUNX1.png", width = 360*(16/9), height = 360)
+tf_activities_Relapse %>% as.data.frame() %>% .[Sample_Baseline_NR,] %>% dplyr::select(c("RUNX1", "CEBPA")) %>%
+  as.matrix() %>% 
+  pheatmap(main="TF activities NR",
+    show_rownames = FALSE,
+    clustering_distance_rows="euclidean",
+    scale = "column", 
+    annotation_row = annotation_for_heatmap_Relapse,
+    annotation_colors = annotation_color_Relapse)
+dev.off()
+```
+
+```{r}
+Phenotype_RNAseq_Responder_Relapse <- ifelse(colnames(RNAseq) %in% Sample_Baseline_R_RUNX1wt, "Responder", ifelse(colnames(RNAseq) %in% Sample_relapse_no_RUNX1, "Relapse", "NA"))
+
+Relapse_Responder_analysis <- Differential_analysis(Phenotype_RNAseq_Responder_Relapse, RNAseq)
+```
+
+
+```{r}
+Relapse_Responder_analysis[["Relapse-Responder"]] <- Relapse_Responder_analysis[["Relapse-Responder"]][,c(1,4)]
+colnames(Relapse_Responder_analysis[["Relapse-Responder"]]) <- c("logFC_Rel_vs_R", "P.Value_Rel_vs_R")
+
+Genes_values_No_RUNX1m_Responder_Relapse <- merge(Genes_values_No_RUNX1m_Responder_Relapse, Relapse_Responder_analysis[["Relapse-Responder"]], by.x = "Row.names", by.y = 0, all = T)
+
+Genes_values_No_RUNX1m_Responder_Relapse %>% write.csv("../Results/Genes_values_no_RUNX1m_Relapse.csv", row.names = F)
 ```
 
