@@ -1700,7 +1700,7 @@ dev.off()
 ```
 
 ```{r}
-Sample_Baseline_NR <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, Phenotype == "Baseline" & RUNX1 == "RUNX1_wt" & Non_Responder == "TRUE") %>% .$Sample
+Sample_Baseline_NR_RUNX1wt <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, Phenotype == "Baseline" & RUNX1 == "RUNX1_wt" & Non_Responder == "TRUE") %>% .$Sample
 Sample_Baseline_R_RUNX1wt <- dplyr::filter(Phenotype_Wang_Feng_RNAseq, Phenotype == "Baseline" & RUNX1 == "RUNX1_wt" & Responder == "TRUE") %>% .$Sample
 
 A <- rownames(tf_activities_No_RUNX1m) %in% Sample_Baseline_NR
@@ -1886,16 +1886,31 @@ dev.off()
 
 ```{r}
 png("../Results/RUNX1_CEBPA_activity_Relapse_R_No_RUNX1.png", width = 360*(16/9), height = 360)
-tf_activities_Relapse %>% as.data.frame() %>% .[unique(c(Sample_relapse_no_RUNX1, Sample_Baseline_R)),] %>% dplyr::select(c("RUNX1", "CEBPA")) %>%
+tf_activities_Relapse %>% as.data.frame() %>% .[unique(c(Sample_relapse_no_RUNX1, Sample_Baseline_R_RUNX1wt)),] %>% dplyr::select(c("RUNX1", "CEBPA")) %>%
   as.matrix() %>% 
   pheatmap(main="TF activities Relapse",
-    show_rownames = FALSE,
+    show_rownames = T,
     clustering_distance_rows="euclidean",
     scale = "column", 
     annotation_row = annotation_for_heatmap_Relapse,
     annotation_colors = annotation_color_Relapse)
 dev.off()
 ```
+
+```{r}
+diff_CEBPA_RUNX1_Relapse <- tf_activities_Relapse %>% as.data.frame() %>% .[c("1825001_BL", "1825001_REL", "2297941_BL", "2297941_REL", "2410163_BL", "2410163_REL"),c("RUNX1", "CEBPA")] 
+diff_CEBPA_RUNX1_Relapse$diff <- diff_CEBPA_RUNX1_Relapse$RUNX1 - diff_CEBPA_RUNX1_Relapse$CEBPA
+
+Changement_RUNX1_CEBPA_ratio_at_relapse <- data.frame("Baseline" = c(diff_CEBPA_RUNX1_Relapse[1, 3], diff_CEBPA_RUNX1_Relapse[3, 3], diff_CEBPA_RUNX1_Relapse[5, 3]), "Relapse" = c(diff_CEBPA_RUNX1_Relapse[2, 3], diff_CEBPA_RUNX1_Relapse[4, 3], diff_CEBPA_RUNX1_Relapse[6, 3]))
+```
+
+```{r}
+plot(c(1,2), Changement_RUNX1_CEBPA_ratio_at_relapse[1,], type = "b", frame = FALSE, pch = 19, 
+     col = "red", xlab = "Baseline to Relapse", ylab = "RUNX1/CEBPA activity ratio", ylim = c(-4.5, 2.5), main = "Shift in RUNX1/CEBPA activity ratio after relapse")
+lines(c(1,2), Changement_RUNX1_CEBPA_ratio_at_relapse[2,], pch = 18, col = "red", type = "b")
+lines(c(1,2), Changement_RUNX1_CEBPA_ratio_at_relapse[3,], pch = 18, col = "blue", type = "b", lty = 2)
+```
+
 
 ```{r}
 png("../Results/RUNX1_CEBPA_activity_NR_No_RUNX1.png", width = 360*(16/9), height = 360)
@@ -1926,3 +1941,195 @@ Genes_values_No_RUNX1m_Responder_Relapse <- merge(Genes_values_No_RUNX1m_Respond
 Genes_values_No_RUNX1m_Responder_Relapse %>% write.csv("../Results/Genes_values_no_RUNX1m_Relapse.csv", row.names = F)
 ```
 
+```{r}
+Sample_no_RUNX1_Baseline <- Sample_no_RUNX1[which(Sample_no_RUNX1 %in% Phenotypes[["Koichi_cohort"]]$Baseline_RNAseq_data)]
+
+tf_activities_no_RUNX1_CEBPa_RUNX1 <- tf_activities_Relapse[Sample_no_RUNX1_Baseline, c("CEBPA", "RUNX1")]
+
+Annotation <- ifelse(rownames(tf_activities_no_RUNX1_CEBPa_RUNX1) %in% Sample_Baseline_NR, "NR", "R")
+Annotation <- rep(Annotation, 2)
+
+
+CEBPA_RUNX1_activity_NR_R_boxplot_df <- data.frame("Activity" = c(tf_activities_no_RUNX1_CEBPa_RUNX1) %>% unlist(),
+                                                   "Annotation" = Annotation,
+                                                   "TF" = rep(c("CEBPA", "RUNX1"), each = 31))
+
+
+
+
+ggplot(CEBPA_RUNX1_activity_NR_R_boxplot_df, aes(y=Activity, x = Annotation, fill = TF))+
+    geom_boxplot(alpha=0.25, outlier.size = -1)+
+    geom_jitter(CEBPA_RUNX1_activity_NR_R_boxplot_df, inherit.aes = FALSE, mapping = aes(y = Activity, x = Annotation), width = 0.25, alpha = 0.5, colour = "darkred")+
+    ggtitle("Activity of CEBPa and RUNX1 in Responder and Non Responder samples")+
+    xlab("")+
+    theme(plot.title = element_text(vjust = 2))+
+    geom_signif(comparisons = list(c("NR", "R")), map_signif_level=TRUE)+  
+    ylab("Relative activity level")+
+    scale_shape_manual(values=c(0,1,2,5,6,7))+
+    theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
+ggsave("../Results/CEBPA_RUNX1_NR_R_activity_boxplot.png")
+```
+
+```{r}
+Diff_activity_per_sample <- c(tf_activities_no_RUNX1_CEBPa_RUNX1$RUNX1 - tf_activities_no_RUNX1_CEBPa_RUNX1$CEBPA)
+names(Diff_activity_per_sample) <- rownames(tf_activities_no_RUNX1_CEBPa_RUNX1)
+
+Annotation_diff <- ifelse(rownames(tf_activities_no_RUNX1_CEBPa_RUNX1) %in% Sample_Baseline_NR, "NR", "R")
+
+CEBPA_RUNX1_diff_activity_NR_R_boxplot_df <- data.frame("Activity" = c(Diff_activity_per_sample),
+                                                   "Annotation" = Annotation_diff)
+
+
+ggplot(CEBPA_RUNX1_diff_activity_NR_R_boxplot_df, aes(y=Activity, x = Annotation, fill = Annotation))+
+    geom_boxplot(alpha=0.25, outlier.size = -1)+
+    geom_jitter(CEBPA_RUNX1_diff_activity_NR_R_boxplot_df, inherit.aes = FALSE, mapping = aes(y = Activity, x = Annotation), width = 0.25, alpha = 0.5, colour = "darkred")+
+    ggtitle("Differencial activity of RUNX1 and CEBPA in Responder and Non Responder samples")+
+    xlab("")+
+    theme(plot.title = element_text(vjust = 2))+
+    geom_signif(comparisons = list(c("NR", "R")), map_signif_level=TRUE)+  
+    ylab("RUNX1/CEBPA activity")+
+    scale_shape_manual(values=c(0,1,2,5,6,7))+
+    theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
+ggsave("../Results/Diff_CEBPA_RUNX1_NR_R_activity_boxplot.png")
+
+```
+
+
+
+```{r}
+Sample_Baseline <- Phenotypes[["Koichi_cohort"]]$Baseline_RNAseq_data %>% na.omit() %>% c()
+Sample_RUNX1m_Baseline <- Sample_Baseline[which(Sample_Baseline %in% RUNX1_profile$Sample_name)]
+Sample_Baseline_R <- Phenotypes[["Koichi_cohort"]]$Baseline_RNAseq_data[which(Phenotypes[["Koichi_cohort"]]$Baseline_phenotype == "Responder")] %>% na.omit() %>% c()
+Sample_Baseline_NR <- Phenotypes[["Koichi_cohort"]]$Baseline_RNAseq_data[which(Phenotypes[["Koichi_cohort"]]$Baseline_phenotype == "Non_Responder")] %>% na.omit() %>% c()
+
+
+tf_activities_Baseline <- tf_activities_Relapse[Sample_Baseline, c("CEBPA", "RUNX1")]
+
+Annotation_RUNX1_mutation_effect <- ifelse(rownames(tf_activities_Baseline) %in% Sample_RUNX1m_Baseline, "RUNX1m", "RUNX1wt")
+Annotation_RUNX1_mutation_effect <- paste(Annotation_RUNX1_mutation_effect, ifelse(rownames(tf_activities_Baseline) %in% Sample_Baseline_R, "R", "NR"), sep = "_")
+
+Annotation_RUNX1_mutation_effect <- rep(Annotation_RUNX1_mutation_effect, 2)
+
+
+
+CEBPA_RUNX1_activity_RUNX1m_Response_boxplot_df <- data.frame("Activity" = c(tf_activities_Baseline) %>% unlist(),
+                                                   "Annotation" = Annotation_RUNX1_mutation_effect,
+                                                   "TF" = rep(c("CEBPA", "RUNX1"), each = 41))
+
+
+
+
+ggplot(CEBPA_RUNX1_activity_RUNX1m_Response_boxplot_df, aes(y=Activity, x = Annotation, fill = TF))+
+    geom_boxplot(alpha=0.25, outlier.size = -1)+
+    geom_jitter(CEBPA_RUNX1_activity_RUNX1m_Response_boxplot_df, inherit.aes = FALSE, mapping = aes(y = Activity, x = Annotation), width = 0.25, alpha = 0.5, colour = "darkred")+
+    ggtitle("Activity of CEBPa and RUNX1 in Responder and Non Responder samples")+
+    xlab("")+
+    theme(plot.title = element_text(vjust = 2))+
+    geom_signif(comparisons = list(c("RUNX1m_R", "RUNX1wt_R"), c("RUNX1m_NR", "RUNX1wt_NR")), map_signif_level=TRUE)+  
+    ylab("Relative activity level")+
+    scale_shape_manual(values=c(0,1,2,5,6,7))+    
+    theme(axis.text.x = element_text(angle = 90)) +
+    theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
+ggsave("../Results/RUNX1m_on_CE&RUN_activity_boxplot.png")
+```
+
+```{r}
+tf_activities_Baseline_delta_activity <- tf_activities_Baseline$RUNX1 - tf_activities_Baseline$CEBPA
+names(tf_activities_Baseline_delta_activity) <- rownames(tf_activities_Baseline)
+
+Annotation_RUNX1_mutation_effect_delta <- ifelse(names(tf_activities_Baseline_delta_activity) %in% Sample_RUNX1m_Baseline, "RUNX1m", "RUNX1wt")
+Annotation_RUNX1_mutation_effect_delta <- paste(Annotation_RUNX1_mutation_effect_delta, ifelse(names(tf_activities_Baseline_delta_activity) %in% Sample_Baseline_R, "R", ifelse(names(tf_activities_Baseline_delta_activity) %in% Sample_Baseline_NR, "NR", "NA")), sep = "_")
+
+
+
+
+delta_activity_RUNX1m_Response_boxplot_df <- data.frame("Activity" = c(tf_activities_Baseline_delta_activity),
+                                                   "Annotation" = Annotation_RUNX1_mutation_effect_delta)
+
+
+ggplot(delta_activity_RUNX1m_Response_boxplot_df, aes(y=Activity, x = Annotation, fill = Annotation))+
+    geom_boxplot(alpha=0.25, outlier.size = -1)+
+    geom_jitter(delta_activity_RUNX1m_Response_boxplot_df, inherit.aes = FALSE, mapping = aes(y = Activity, x = Annotation), width = 0.25, alpha = 0.5, colour = "darkred")+
+    ggtitle("Differencial activity of RUNX1 and CEBPA in RUNX1m and RUNX1wt samples")+
+    xlab("")+
+    theme(plot.title = element_text(vjust = 2))+
+    geom_signif(comparisons = list(c("RUNX1m_R", "RUNX1m_NR"), c("RUNX1wt_NR", "RUNX1wt_R")), map_signif_level=TRUE)+  
+    ylab("Relative activity level")+
+    scale_shape_manual(values=c(0,1,2,5,6,7))+    
+    theme(axis.text.x = element_text(angle = 90)) +
+    theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
+ggsave("../Results/RUNX1m_on_CE&RUN_activity_boxplot.png")
+```
+
+
+# RUNX1m analysis
+
+```{r}
+RUNX1m_analysis <- ifelse(colnames(RNAseq) %in% Sample_no_RUNX1_Baseline, "RUNX1wt_Baseline", ifelse(colnames(RNAseq) %in% Sample_RUNX1m_Baseline, "RUNX1m_Baseline", "NA"))
+
+RUNX1m_Baseline_analysis <- Differential_analysis(RUNX1m_analysis, RNAseq)
+```
+# CEBPA & RUNX1 TF activity Ttest
+
+```{r}
+t.test(tf_activities[Sample_Baseline_NR_RUNX1wt, "CEBPA"], tf_activities[Sample_Baseline_R_RUNX1wt, "CEBPA"])
+t.test(tf_activities[Sample_Baseline_NR_RUNX1wt, "RUNX1"], tf_activities[Sample_Baseline_R_RUNX1wt, "RUNX1"])
+t.test(tf_activities[Sample_RUNX1m_Baseline, "CEBPA"], tf_activities[Sample_no_RUNX1_Baseline, "CEBPA"])
+t.test(tf_activities[Sample_RUNX1m_Baseline, "RUNX1"], tf_activities[Sample_no_RUNX1_Baseline, "RUNX1"])
+
+```
+# RUNX1/CEBPA activity ratio Ttest
+
+```{r}
+t.test(c(tf_activities[Sample_Baseline_NR_RUNX1wt, "RUNX1"] - tf_activities[Sample_Baseline_NR_RUNX1wt, "CEBPA"]) , c(tf_activities[Sample_Baseline_R_RUNX1wt, "RUNX1"] - tf_activities[Sample_Baseline_R_RUNX1wt, "CEBPA"]))
+
+t.test(c(tf_activities[Sample_RUNX1m_Baseline, "RUNX1"] - tf_activities[Sample_RUNX1m_Baseline, "CEBPA"]) , c(tf_activities[Sample_no_RUNX1_Baseline, "RUNX1"] - tf_activities[Sample_no_RUNX1_Baseline, "CEBPA"]))
+```
+
+```{r}
+Diff_activity_NR_R <- data.frame(Diff_activity = c(c(tf_activities[Sample_Baseline_NR_RUNX1wt, "RUNX1"] - tf_activities[Sample_Baseline_NR_RUNX1wt, "CEBPA"]) , c(tf_activities[Sample_Baseline_R_RUNX1wt, "RUNX1"] - tf_activities[Sample_Baseline_R_RUNX1wt, "CEBPA"])),
+                                 Phenotype = c(rep("NR", length(Sample_Baseline_NR_RUNX1wt)), rep("R", length(Sample_Baseline_R_RUNX1wt))))
+
+anno <- t.test(
+  c(tf_activities[Sample_Baseline_NR_RUNX1wt, "RUNX1"] - tf_activities[Sample_Baseline_NR_RUNX1wt, "CEBPA"]) , c(tf_activities[Sample_Baseline_R_RUNX1wt, "RUNX1"] - tf_activities[Sample_Baseline_R_RUNX1wt, "CEBPA"])
+)$p.value
+
+ggplot(Diff_activity_NR_R, aes(y=Diff_activity, x = Phenotype, fill = Phenotype))+
+    geom_boxplot(alpha=0.25, outlier.size = -1)+
+    geom_jitter(Diff_activity_NR_R, inherit.aes = FALSE, mapping = aes(y = Diff_activity, x = Phenotype), width = 0.25, alpha = 0.5, colour = "darkred")+
+    ggtitle("Differencial activity of RUNX1 and CEBPA in NR and R samples")+
+    xlab("")+
+    theme(plot.title = element_text(vjust = 2))+
+    geom_signif(comparisons = list(c("NR", "R")), 
+                map_signif_level=TRUE,
+                annotation = formatC(anno, digits = 2))+  
+    ylab("Relative activity level")+
+    scale_shape_manual(values=c(0,1,2,5,6,7))+    
+    theme(axis.text.x = element_text(angle = 90)) +
+    theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
+ggsave("../Results/RUNX1_CEBPA_diff_NR_vs_R.png")
+```
+
+```{r}
+Diff_activity_NR_R <- data.frame(Diff_activity = c(c(tf_activities[Sample_Baseline_NR_RUNX1wt, "RUNX1"] / tf_activities[Sample_Baseline_NR_RUNX1wt, "CEBPA"]) , c(tf_activities[Sample_Baseline_R_RUNX1wt, "RUNX1"]/ tf_activities[Sample_Baseline_R_RUNX1wt, "CEBPA"])),
+                                 Phenotype = c(rep("NR", length(Sample_Baseline_NR_RUNX1wt)), rep("R", length(Sample_Baseline_R_RUNX1wt))))
+
+anno <- t.test(
+  c(tf_activities[Sample_Baseline_NR_RUNX1wt, "RUNX1"] / tf_activities[Sample_Baseline_NR_RUNX1wt, "CEBPA"]) , c(tf_activities[Sample_Baseline_R_RUNX1wt, "RUNX1"] / tf_activities[Sample_Baseline_R_RUNX1wt, "CEBPA"])
+)$p.value
+
+ggplot(Diff_activity_NR_R, aes(y=Diff_activity, x = Phenotype, fill = Phenotype))+
+    geom_boxplot(alpha=0.25, outlier.size = -1)+
+    geom_jitter(Diff_activity_NR_R, inherit.aes = FALSE, mapping = aes(y = Diff_activity, x = Phenotype), width = 0.25, alpha = 0.5, colour = "darkred")+
+    ggtitle("Differencial activity of RUNX1 and CEBPA in NR and R samples")+
+    xlab("")+
+    theme(plot.title = element_text(vjust = 2))+
+    geom_signif(comparisons = list(c("NR", "R")), 
+                map_signif_level=TRUE,
+                annotation = formatC(anno, digits = 2))+  
+    ylab("Relative activity level")+
+    scale_shape_manual(values=c(0,1,2,5,6,7))+    
+    theme(axis.text.x = element_text(angle = 90)) +
+    theme(plot.margin=unit(c(0.2,1.5,0.5,0.2),"cm"))
+ggsave("../Results/RUNX1_CEBPA_ratio_NR_vs_R.png")
+```
