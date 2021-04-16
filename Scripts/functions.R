@@ -1344,7 +1344,7 @@ tf_activities_function<- function(treatment,control,path){
   return(ht) 
 }
 
-Gene_set_analysis <- function(Analysis, organism){
+Gene_set_analysis <- function(Analysis, organism = org.Hs.eg.db){
   gene_list <- Analysis$logFC
   names(gene_list) <- Analysis$ID
   gene_list<-na.omit(gene_list)

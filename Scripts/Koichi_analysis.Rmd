@@ -1640,6 +1640,8 @@ R_Samples <-  Phenotype_Wang_Feng_RNAseq %>% dplyr::filter(Phenotype == "Baselin
 Phenotype_NR_R_no_RUNX1 <- ifelse(colnames(RNAseq_no_RUNX1m) %in% NR_Samples, "Non_Responder", ifelse(colnames(RNAseq_no_RUNX1m) %in% R_Samples, "Responder", "NA"))
 
 RNAseq_no_RUNX1m_analysis <- Differential_analysis(Phenotype_NR_R_no_RUNX1, RNAseq_no_RUNX1m)
+
+write.csv(RNAseq_no_RUNX1m_analysis[["Non_Responder-Responder"]], "../Results/Non_Responder_Responder_no_RUNX1m_analysis.csv")
 ```
 
 ```{r}
@@ -1647,11 +1649,27 @@ KEGG_analysis_NR_R_no_RUNX1 <- KEGG_pathway_analysis(RNAseq_no_RUNX1m_analysis[[
 ```
 
 ```{r}
-Gene_set_NR_R_no_RUNX1 <- Gene_set_analysis(RNAseq_no_RUNX1m_analysis[["Non_Responder-Responder"]], organism = org.Hs.eg.db)
+Gene_set_NR_R_no_RUNX1 <- Gene_set_analysis(RNAseq_no_RUNX1m_analysis[["Non_Responder-Responder"]])
 ```
 
 ```{r}
 gseaplot(Gene_set_NR_R_no_RUNX1, by = "all", title = Gene_set_NR_R_no_RUNX1$Description[723], geneSetID = 723)
+```
+
+```{r}
+A <- rownames(tf_activities) %in% Sample_Baseline_NR_RUNX1wt
+B <- rownames(tf_activities) %in% Sample_Baseline_R_RUNX1wt 
+
+tf_Ttest_activities_NR_vs_R_no_RUNX1 <- tf_activities %>%
+  sapply(., function(x){
+    test_tmp <- t.test(x[A], x[B])
+    c("p.value_activities" = test_tmp$p.value, 
+               "Non_reponder" = test_tmp$estimate[1], 
+               "Responder" = test_tmp$estimate[2])
+  }) %>%
+  t()
+
+write.csv(tf_Ttest_activities_NR_vs_R_no_RUNX1, "../Results/tf_Ttest_activities_NR_vs_R_no_RUNX1.csv")
 ```
 
 
@@ -2068,7 +2086,43 @@ ggsave("../Results/RUNX1m_on_CE&RUN_activity_boxplot.png")
 RUNX1m_analysis <- ifelse(colnames(RNAseq) %in% Sample_no_RUNX1_Baseline, "RUNX1wt_Baseline", ifelse(colnames(RNAseq) %in% Sample_RUNX1m_Baseline, "RUNX1m_Baseline", "NA"))
 
 RUNX1m_Baseline_analysis <- Differential_analysis(RUNX1m_analysis, RNAseq)
+
+write.csv(RUNX1m_Baseline_analysis[["RUNX1m_Baseline-RUNX1wt_Baseline"]], "../Results/RUNX1m_Baseline_analysis.csv", row.names = T)
 ```
+
+```{r}
+gse_RUNX1m <- Gene_set_analysis(RUNX1m_Baseline_analysis[["RUNX1m_Baseline-RUNX1wt_Baseline"]])
+dotplot(gse_RUNX1m, showCategory=10, split=".sign") + facet_grid(.~.sign)
+ggsave("../Results/Gene_set_RUNX1mutation_Baseline.png")
+```
+
+```{r}
+gseaplot(gse_RUNX1m, by = "all", title = "vitamin D binding", geneSetID = 575)
+ggsave("../Results/VitaminDbinding_RUNX1m.png")
+gseaplot(gse_RUNX1m, by = "all", title = gse_RUNX1m$Description[139], geneSetID = 139)
+ggsave("../Results/Vitaminbinding_RUNX1m.png")
+
+```
+# Diff TF activities NR vs R
+
+```{r}
+A <- rownames(tf_activities) %in% Sample_RUNX1m_Baseline
+
+B <- rownames(tf_activities) %in% Sample_no_RUNX1_Baseline
+
+tf_Ttest_activities_RUNX1m <- tf_activities %>%
+  sapply(., function(x){
+    test_tmp <- t.test(x[A], x[B])
+    c("p.value_activities" = test_tmp$p.value, 
+               "Non_reponder" = test_tmp$estimate[1], 
+               "Responder" = test_tmp$estimate[2])
+  }) %>%
+  t()
+
+write.csv(tf_Ttest_activities_RUNX1m, "../Results/tf_Ttest_activities_RUNX1m.csv")
+```
+
+
 # CEBPA & RUNX1 TF activity Ttest
 
 ```{r}
